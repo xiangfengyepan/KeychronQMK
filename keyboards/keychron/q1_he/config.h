@@ -75,6 +75,13 @@
 #define TYPING_PROFILE_INDEX 0
 #define TYPING_ACTUATION_POINT 26
 
+/* RGB adjust step = 1 for fine control. Holding a key auto-repeats (see keymap
+ * process_record_user / housekeeping_task_user), so a hold ramps smoothly. */
+#define RGB_MATRIX_HUE_STEP 1
+#define RGB_MATRIX_SAT_STEP 1
+#define RGB_MATRIX_VAL_STEP 1
+#define RGB_MATRIX_SPD_STEP 1
+
 /* Mouse keys: 5 persistent speed levels, ASCENDING (tap to lock a speed).
  * OFFSET = pixels per report (higher = faster); INTERVAL = ms between reports.
  * On the Fn layer, left to right F1..F5 = slowest .. fastest. */

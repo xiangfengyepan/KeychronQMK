@@ -31,6 +31,23 @@ extern void letters_process_record(uint16_t keycode, keyrecord_t *record);
 extern void mousekey_set_accel_level(uint8_t level);
 enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5 };
 
+// Hold-to-repeat for the RGB adjust keys (step is 1, so a hold ramps smoothly).
+#define RGB_HOLD_INTERVAL 28 // ms between repeats while a key is held
+static uint16_t rgb_hold_kc    = 0;
+static uint16_t rgb_hold_timer = 0;
+static void rgb_hold_apply(uint16_t kc) {
+    switch (kc) {
+        case UG_HUEU: rgb_matrix_increase_hue_noeeprom(); break;
+        case UG_HUED: rgb_matrix_decrease_hue_noeeprom(); break;
+        case UG_SATU: rgb_matrix_increase_sat_noeeprom(); break;
+        case UG_SATD: rgb_matrix_decrease_sat_noeeprom(); break;
+        case UG_VALU: rgb_matrix_increase_val_noeeprom(); break;
+        case UG_VALD: rgb_matrix_decrease_val_noeeprom(); break;
+        case UG_SPDU: rgb_matrix_increase_speed_noeeprom(); break;
+        case UG_SPDD: rgb_matrix_decrease_speed_noeeprom(); break;
+    }
+}
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = {
@@ -86,6 +103,25 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case MS_ACC5: // layer 1, F5: 2.0x -> speed level index 5 (mkspd_4)
             if (record->event.pressed) mousekey_set_accel_level(5);
             return false;
+        case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
+        case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:
+            if (record->event.pressed) {
+                rgb_hold_kc    = keycode; // begin auto-repeat while held
+                rgb_hold_timer = timer_read();
+            } else {
+                if (rgb_hold_kc == keycode) rgb_hold_kc = 0;
+                // persist whatever value the hold reached
+                rgb_matrix_sethsv(rgb_matrix_get_hue(), rgb_matrix_get_sat(), rgb_matrix_get_val());
+                rgb_matrix_set_speed(rgb_matrix_get_speed());
+            }
+            return true; // let the normal handler apply the first (tap) step
     }
     return true;
+}
+
+void housekeeping_task_user(void) {
+    if (rgb_hold_kc && timer_elapsed(rgb_hold_timer) > RGB_HOLD_INTERVAL) {
+        rgb_hold_apply(rgb_hold_kc);
+        rgb_hold_timer = timer_read();
+    }
 }
