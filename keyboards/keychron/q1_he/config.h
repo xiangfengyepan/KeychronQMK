@@ -62,6 +62,19 @@
 #define CONNECTED_IDLE_TIME 600
 #define CONNECTED_BACKLIGHT_DISABLE_TIMEOUT 60
 
+/* Valorant-tuned "gaming" HE profile = Profile 2 in the Launcher (index 1).
+ * Applied when that profile is reset (factory reset or Launcher "Reset profile").
+ *   Rapid Trigger ON, actuation 1.2 mm, re-trigger sensitivity 0.2 mm.
+ * (Values in 0.1 mm units; stock defaults are 2.0 mm / 0.4 mm.) */
+#define GAMING_PROFILE_INDEX 1
+#define GAMING_ACTUATION_POINT 12
+#define GAMING_RAPID_TRIGGER_SENSITIVITY 2
+
+/* Typing / programming HE profile = Profile 1 in the Launcher (index 0).
+ * Regular (static) actuation at 2.6 mm for fewer accidental presses. */
+#define TYPING_PROFILE_INDEX 0
+#define TYPING_ACTUATION_POINT 26
+
 /* Mouse keys: 3-speed mode.
  * Tap KC_MS_ACCEL0/1/2 to SET a persistent cursor speed (no need to hold).
  * MK_MOMENTARY_ACCEL is intentionally NOT defined, so the chosen speed sticks.

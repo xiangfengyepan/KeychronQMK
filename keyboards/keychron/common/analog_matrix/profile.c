@@ -326,6 +326,24 @@ bool profile_reset(uint8_t prof_index) {
     prof->global.act_pt             = DEFAULT_ACTUATION_POINT;
     prof->global.rpd_trig_sen_deact = prof->global.rpd_trig_sen = DEFAULT_RAPID_TRIGGER_SENSITIVITY;
 
+#ifdef GAMING_PROFILE_INDEX
+    // Valorant-tuned gaming profile: Rapid Trigger, shallow actuation,
+    // fast re-trigger sensitivity (act_pt / sensitivity in 0.1 mm units).
+    if (prof_index == GAMING_PROFILE_INDEX) {
+        prof->global.mode               = AKM_RAPID;
+        prof->global.act_pt             = GAMING_ACTUATION_POINT;
+        prof->global.rpd_trig_sen_deact = prof->global.rpd_trig_sen = GAMING_RAPID_TRIGGER_SENSITIVITY;
+    }
+#endif
+#ifdef TYPING_PROFILE_INDEX
+    // Typing / programming profile: static (Regular) actuation, deeper point
+    // to avoid accidental presses (act_pt in 0.1 mm units).
+    if (prof_index == TYPING_PROFILE_INDEX) {
+        prof->global.mode   = AKM_REGULAR;
+        prof->global.act_pt = TYPING_ACTUATION_POINT;
+    }
+#endif
+
     for (uint8_t r = 0; r < MATRIX_ROWS; r++)
         for (uint8_t c = 0; c < MATRIX_COLS; c++) {
             prof->key_config[r][c].mode     = default_profiles[prof_index][r][c] & 0x3;
