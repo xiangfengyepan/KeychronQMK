@@ -24,6 +24,7 @@ RGB_MATRIX_EFFECT(MIXED_RGB)
 // effect id >= RGB_MATRIX_CUSTOM_MIXED_RGB, and PER_KEY_RGB/MIXED_RGB ids are fixed).
 RGB_MATRIX_EFFECT(LETTERS_MARQUEE)
 RGB_MATRIX_EFFECT(LETTERS_BIG)
+RGB_MATRIX_EFFECT(SPIDER_MASK)
 
 #    ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 
@@ -45,6 +46,11 @@ bool LETTERS_MARQUEE(effect_params_t *params) {
 bool LETTERS_BIG(effect_params_t *params) {
     extern bool letters_big(effect_params_t * params);
     return letters_big(params);
+}
+
+bool SPIDER_MASK(effect_params_t *params) {
+    extern bool spider_mask(effect_params_t * params);
+    return spider_mask(params);
 }
 
 #    endif
