@@ -49,6 +49,26 @@ static void rgb_hold_apply(uint16_t kc) {
     }
 }
 
+// Flash the board red when an RGB setting hits its min/max while adjusting.
+#define LIMIT_FLASH_MS 140
+static bool     limit_flash       = false;
+static uint16_t limit_flash_timer = 0;
+static uint16_t adj_check_kc      = 0;
+static bool rgb_at_limit(uint16_t kc) {
+    switch (kc) {
+        case UG_SATU: return rgb_matrix_get_sat() >= 255;
+        case UG_SATD: return rgb_matrix_get_sat() == 0;
+        case UG_VALU: return rgb_matrix_get_val() >= 255;
+        case UG_VALD: return rgb_matrix_get_val() <= RGB_MATRIX_BRIGHTNESS_TURN_OFF_VAL + RGB_MATRIX_VAL_STEP;
+        case UG_SPDU: return rgb_matrix_get_speed() >= 255;
+        case UG_SPDD: return rgb_matrix_get_speed() == 0;
+        default:      return false; // hue wraps -> no min/max
+    }
+}
+static void limit_check(uint16_t kc) {
+    if (rgb_at_limit(kc)) { limit_flash = true; limit_flash_timer = timer_read(); }
+}
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = {
@@ -112,6 +132,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                 rgb_hold_kc    = keycode; // begin auto-repeat while held
                 rgb_hold_timer = timer_read();
+                adj_check_kc   = keycode; // check min/max after the step applies
             } else {
                 if (rgb_hold_kc == keycode) rgb_hold_kc = 0;
                 // persist whatever value the hold reached
@@ -127,5 +148,21 @@ void housekeeping_task_user(void) {
     if (rgb_hold_kc && timer_elapsed(rgb_hold_timer) > RGB_HOLD_INTERVAL) {
         rgb_hold_apply(rgb_hold_kc);
         rgb_hold_timer = timer_read();
+        limit_check(rgb_hold_kc); // held at a boundary keeps the flash lit
     }
+    if (adj_check_kc) { // one-shot check after a tap (value already applied)
+        limit_check(adj_check_kc);
+        adj_check_kc = 0;
+    }
+}
+
+bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    if (limit_flash) {
+        if (timer_elapsed(limit_flash_timer) < LIMIT_FLASH_MS) {
+            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 255, 0, 0);
+        } else {
+            limit_flash = false;
+        }
+    }
+    return true;
 }
