@@ -56,6 +56,12 @@
 #    define SNLED27351_SPI_DIVISOR 16
 #endif
 
+/* Power-management default timeouts (seconds).
+ * Baked-in defaults shown in the Launcher after an EEPROM reset:
+ *   auto-sleep = 10 min, auto backlight-off = 1 min. */
+#define CONNECTED_IDLE_TIME 600
+#define CONNECTED_BACKLIGHT_DISABLE_TIMEOUT 60
+
 /* Wireless Configuration */
 #ifdef LK_WIRELESS_ENABLE
 /* Hardware Configuration */

@@ -20,6 +20,10 @@
 
 RGB_MATRIX_EFFECT(PER_KEY_RGB)
 RGB_MATRIX_EFFECT(MIXED_RGB)
+// Custom effects must stay below MIXED_RGB (the VIA mixed-layer list rejects any
+// effect id >= RGB_MATRIX_CUSTOM_MIXED_RGB, and PER_KEY_RGB/MIXED_RGB ids are fixed).
+RGB_MATRIX_EFFECT(LETTERS_MARQUEE)
+RGB_MATRIX_EFFECT(LETTERS_BIG)
 
 #    ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 
@@ -31,6 +35,16 @@ bool PER_KEY_RGB(effect_params_t *params) {
 bool MIXED_RGB(effect_params_t *params) {
     extern bool mixed_rgb(effect_params_t * params);
     return mixed_rgb(params);
+}
+
+bool LETTERS_MARQUEE(effect_params_t *params) {
+    extern bool letters_marquee(effect_params_t * params);
+    return letters_marquee(params);
+}
+
+bool LETTERS_BIG(effect_params_t *params) {
+    extern bool letters_big(effect_params_t * params);
+    return letters_big(params);
 }
 
 #    endif
