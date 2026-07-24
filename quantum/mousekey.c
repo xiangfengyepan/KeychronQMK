@@ -499,7 +499,33 @@ void mousekey_off(uint8_t code) {
 
 #else /* #ifndef MK_3_SPEED */
 
-enum { mkspd_unmod, mkspd_0, mkspd_1, mkspd_2, mkspd_COUNT };
+enum { mkspd_unmod, mkspd_0, mkspd_1, mkspd_2, mkspd_3, mkspd_4, mkspd_COUNT };
+/* Extra speed levels 3/4 (selected by custom keycodes). Defaults are overridable
+ * per-keyboard; guarded so keyboards that don't define them still build. */
+#    ifndef MK_C_OFFSET_3
+#        define MK_C_OFFSET_3 2
+#    endif
+#    ifndef MK_C_INTERVAL_3
+#        define MK_C_INTERVAL_3 16
+#    endif
+#    ifndef MK_C_OFFSET_4
+#        define MK_C_OFFSET_4 32
+#    endif
+#    ifndef MK_C_INTERVAL_4
+#        define MK_C_INTERVAL_4 16
+#    endif
+#    ifndef MK_W_OFFSET_3
+#        define MK_W_OFFSET_3 1
+#    endif
+#    ifndef MK_W_INTERVAL_3
+#        define MK_W_INTERVAL_3 120
+#    endif
+#    ifndef MK_W_OFFSET_4
+#        define MK_W_OFFSET_4 1
+#    endif
+#    ifndef MK_W_INTERVAL_4
+#        define MK_W_INTERVAL_4 20
+#    endif
 #    ifndef MK_MOMENTARY_ACCEL
 static uint8_t  mk_speed                 = mkspd_1;
 #    else
@@ -508,10 +534,10 @@ static uint8_t mkspd_DEFAULT = mkspd_unmod;
 #    endif
 static uint16_t last_timer_c             = 0;
 static uint16_t last_timer_w             = 0;
-uint16_t        c_offsets[mkspd_COUNT]   = {MK_C_OFFSET_UNMOD, MK_C_OFFSET_0, MK_C_OFFSET_1, MK_C_OFFSET_2};
-uint16_t        c_intervals[mkspd_COUNT] = {MK_C_INTERVAL_UNMOD, MK_C_INTERVAL_0, MK_C_INTERVAL_1, MK_C_INTERVAL_2};
-uint16_t        w_offsets[mkspd_COUNT]   = {MK_W_OFFSET_UNMOD, MK_W_OFFSET_0, MK_W_OFFSET_1, MK_W_OFFSET_2};
-uint16_t        w_intervals[mkspd_COUNT] = {MK_W_INTERVAL_UNMOD, MK_W_INTERVAL_0, MK_W_INTERVAL_1, MK_W_INTERVAL_2};
+uint16_t        c_offsets[mkspd_COUNT]   = {MK_C_OFFSET_UNMOD, MK_C_OFFSET_0, MK_C_OFFSET_1, MK_C_OFFSET_2, MK_C_OFFSET_3, MK_C_OFFSET_4};
+uint16_t        c_intervals[mkspd_COUNT] = {MK_C_INTERVAL_UNMOD, MK_C_INTERVAL_0, MK_C_INTERVAL_1, MK_C_INTERVAL_2, MK_C_INTERVAL_3, MK_C_INTERVAL_4};
+uint16_t        w_offsets[mkspd_COUNT]   = {MK_W_OFFSET_UNMOD, MK_W_OFFSET_0, MK_W_OFFSET_1, MK_W_OFFSET_2, MK_W_OFFSET_3, MK_W_OFFSET_4};
+uint16_t        w_intervals[mkspd_COUNT] = {MK_W_INTERVAL_UNMOD, MK_W_INTERVAL_0, MK_W_INTERVAL_1, MK_W_INTERVAL_2, MK_W_INTERVAL_3, MK_W_INTERVAL_4};
 
 void mousekey_task(void) {
     // report cursor and scroll movement independently
@@ -561,6 +587,16 @@ void adjust_speed(void) {
     if (mouse_report.h && mouse_report.v) {
         mouse_report.h = times_inv_sqrt2(mouse_report.h);
         mouse_report.v = times_inv_sqrt2(mouse_report.v);
+    }
+}
+
+// Persistently select a mouse speed level (0..mkspd_COUNT-1). Used by custom
+// keycodes to reach the extra levels beyond the built-in ACCEL0/1/2.
+void mousekey_set_accel_level(uint8_t level) {
+    if (level >= mkspd_COUNT) return;
+    if (mk_speed != level) {
+        mk_speed = level;
+        adjust_speed();
     }
 }
 

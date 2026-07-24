@@ -27,6 +27,10 @@
 // Capture typed keys for the LETTERS_MARQUEE / LETTERS_BIG RGB effects.
 extern void letters_process_record(uint16_t keycode, keyrecord_t *record);
 
+// Extra persistent mouse-speed levels (beyond built-in ACCEL0/1/2).
+extern void mousekey_set_accel_level(uint8_t level);
+enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5 };
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = {
@@ -38,7 +42,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x00E0, 0x7E00, 0x7E02, 0x0000, 0x0000, 0x0000, 0x002C, 0x0000, 0x0000, 0x7E03, 0x5221, 0x00E4, 0x0050, 0x0051, 0x004F },
     },
     [1] = {
-        { 0x0000, 0x00DD, 0x00DE, 0x00DF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
+        { 0x0000, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
         { 0x5242, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D9 },
         { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
         { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
@@ -75,5 +79,13 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     letters_process_record(keycode, record);
+    switch (keycode) {
+        case MS_ACC4: // layer 1, F4: 1.0x -> speed level index 4 (mkspd_3)
+            if (record->event.pressed) mousekey_set_accel_level(4);
+            return false;
+        case MS_ACC5: // layer 1, F5: 2.0x -> speed level index 5 (mkspd_4)
+            if (record->event.pressed) mousekey_set_accel_level(5);
+            return false;
+    }
     return true;
 }

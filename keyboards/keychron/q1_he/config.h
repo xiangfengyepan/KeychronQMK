@@ -75,28 +75,36 @@
 #define TYPING_PROFILE_INDEX 0
 #define TYPING_ACTUATION_POINT 26
 
-/* Mouse keys: 3-speed mode.
- * Tap KC_MS_ACCEL0/1/2 to SET a persistent cursor speed (no need to hold).
- * MK_MOMENTARY_ACCEL is intentionally NOT defined, so the chosen speed sticks.
- * OFFSET = pixels moved per report, INTERVAL = ms between reports (lower = faster). */
+/* Mouse keys: 5 persistent speed levels, ASCENDING (tap to lock a speed).
+ * OFFSET = pixels per report (higher = faster); INTERVAL = ms between reports.
+ * On the Fn layer, left to right F1..F5 = slowest .. fastest. */
 #define MK_3_SPEED
-#define MK_C_OFFSET_UNMOD 16 /* speed at power-on, before any ACCEL key */
+/* Cursor speeds as multiples of 1x (=offset 16). F1..F5 = 0.1 / 0.2 / 0.4 / 1 / 2. */
+#define MK_C_OFFSET_UNMOD 16 /* power-on default = 1.0x */
 #define MK_C_INTERVAL_UNMOD 16
-#define MK_C_OFFSET_0 6 /* ACCEL0 = slow / precise (~375 px/s)  */
+#define MK_C_OFFSET_0 2 /* acc0 (F1) = 0.1x */
 #define MK_C_INTERVAL_0 16
-#define MK_C_OFFSET_1 16 /* ACCEL1 = normal         (~1000 px/s) */
+#define MK_C_OFFSET_1 3 /* acc1 (F2) = 0.2x */
 #define MK_C_INTERVAL_1 16
-#define MK_C_OFFSET_2 40 /* ACCEL2 = fast           (~2500 px/s) */
+#define MK_C_OFFSET_2 6 /* acc2 (F3) = 0.4x */
 #define MK_C_INTERVAL_2 16
-/* Scroll-wheel speed per level (lower interval = faster scroll) */
+#define MK_C_OFFSET_3 16 /* acc4 (F4) = 1.0x */
+#define MK_C_INTERVAL_3 16
+#define MK_C_OFFSET_4 32 /* acc5 (F5) = 2.0x */
+#define MK_C_INTERVAL_4 16
+/* Scroll-wheel: higher interval = slower scroll, matched to the same ratios */
 #define MK_W_OFFSET_UNMOD 1
-#define MK_W_INTERVAL_UNMOD 40
+#define MK_W_INTERVAL_UNMOD 40 /* 1.0x */
 #define MK_W_OFFSET_0 1
-#define MK_W_INTERVAL_0 120 /* ACCEL0 = slow scroll   */
+#define MK_W_INTERVAL_0 300 /* acc0 0.1x */
 #define MK_W_OFFSET_1 1
-#define MK_W_INTERVAL_1 40 /* ACCEL1 = normal scroll */
+#define MK_W_INTERVAL_1 180 /* acc1 0.2x */
 #define MK_W_OFFSET_2 1
-#define MK_W_INTERVAL_2 15 /* ACCEL2 = fast scroll   */
+#define MK_W_INTERVAL_2 90 /* acc2 0.4x */
+#define MK_W_OFFSET_3 1
+#define MK_W_INTERVAL_3 40 /* acc4 1.0x */
+#define MK_W_OFFSET_4 1
+#define MK_W_INTERVAL_4 20 /* acc5 2.0x */
 
 /* Wireless Configuration */
 #ifdef LK_WIRELESS_ENABLE
