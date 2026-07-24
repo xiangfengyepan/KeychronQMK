@@ -62,6 +62,29 @@
 #define CONNECTED_IDLE_TIME 600
 #define CONNECTED_BACKLIGHT_DISABLE_TIMEOUT 60
 
+/* Mouse keys: 3-speed mode.
+ * Tap KC_MS_ACCEL0/1/2 to SET a persistent cursor speed (no need to hold).
+ * MK_MOMENTARY_ACCEL is intentionally NOT defined, so the chosen speed sticks.
+ * OFFSET = pixels moved per report, INTERVAL = ms between reports (lower = faster). */
+#define MK_3_SPEED
+#define MK_C_OFFSET_UNMOD 16 /* speed at power-on, before any ACCEL key */
+#define MK_C_INTERVAL_UNMOD 16
+#define MK_C_OFFSET_0 6 /* ACCEL0 = slow / precise (~375 px/s)  */
+#define MK_C_INTERVAL_0 16
+#define MK_C_OFFSET_1 16 /* ACCEL1 = normal         (~1000 px/s) */
+#define MK_C_INTERVAL_1 16
+#define MK_C_OFFSET_2 40 /* ACCEL2 = fast           (~2500 px/s) */
+#define MK_C_INTERVAL_2 16
+/* Scroll-wheel speed per level (lower interval = faster scroll) */
+#define MK_W_OFFSET_UNMOD 1
+#define MK_W_INTERVAL_UNMOD 40
+#define MK_W_OFFSET_0 1
+#define MK_W_INTERVAL_0 120 /* ACCEL0 = slow scroll   */
+#define MK_W_OFFSET_1 1
+#define MK_W_INTERVAL_1 40 /* ACCEL1 = normal scroll */
+#define MK_W_OFFSET_2 1
+#define MK_W_INTERVAL_2 15 /* ACCEL2 = fast scroll   */
+
 /* Wireless Configuration */
 #ifdef LK_WIRELESS_ENABLE
 /* Hardware Configuration */
