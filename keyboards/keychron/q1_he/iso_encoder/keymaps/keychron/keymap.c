@@ -26,10 +26,11 @@
 
 // Capture typed keys for the LETTERS_MARQUEE / LETTERS_BIG RGB effects.
 extern void letters_process_record(uint16_t keycode, keyrecord_t *record);
+extern void letters_clear(void); // wipe the marquee / letter buffer
 
 // Extra persistent mouse-speed levels (beyond built-in ACCEL0/1/2).
 extern void mousekey_set_accel_level(uint8_t level);
-enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5 };
+enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR };
 
 // Hold-to-repeat for the RGB adjust keys (step is 1, so a hold ramps smoothly).
 #define RGB_HOLD_INTERVAL 28 // ms between repeats while a key is held
@@ -60,7 +61,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     },
     [1] = {
         { 0x0000, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
-        { 0x5242, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D9 },
+        { 0x5242, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, LT_CLEAR, 0x00D9 },
         { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
         { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
         { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00CD },
@@ -102,6 +103,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case MS_ACC5: // layer 1, F5: 2.0x -> speed level index 5 (mkspd_4)
             if (record->event.pressed) mousekey_set_accel_level(5);
+            return false;
+        case LT_CLEAR: // layer 1, Backspace: reset the marquee / letter buffer
+            if (record->event.pressed) letters_clear();
             return false;
         case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
         case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:

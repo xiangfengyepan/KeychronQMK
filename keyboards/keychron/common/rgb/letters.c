@@ -51,6 +51,12 @@ static uint8_t  lt_glyph[LT_BUF];
 static uint16_t lt_time[LT_BUF];
 static uint8_t  lt_head = 0, lt_count = 0;
 
+// Manual reset — bind a key to LT_CLEAR in the keymap to wipe the buffer instantly.
+void letters_clear(void) {
+    lt_count = 0;
+    lt_head  = 0;
+}
+
 static uint8_t kc_to_glyph(uint16_t kc) {
     if (kc >= KC_A && kc <= KC_Z) return kc - KC_A;         // A-Z -> 0..25
     if (kc >= KC_1 && kc <= KC_9) return 27 + (kc - KC_1);  // '1'..'9' -> 27..35
