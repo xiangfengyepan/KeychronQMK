@@ -47,6 +47,8 @@ On **layer 1 (hold Fn), keys F1–F5**, ascending:
 
 F1–F3 are QMK's built-in `KC_MS_ACCEL0/1/2`; F4/F5 are custom keycodes. Scroll-wheel speed scales to the same ratios. Values in `q1_he/config.h` (`MK_C_OFFSET_*`).
 
+- **Figure-8 auto-mover:** **Fn+F6** (`MS_INF8`) toggles a continuous ∞ (figure-8) cursor motion that starts at the center (vertical "8", downward). Fixed size; speed follows the active accel level (F1–F5). Press again to stop. Implemented as a background routine in `housekeeping_task_user` sending relative mouse reports (`host_mouse_send`); the current speed comes from `mousekey_get_offset()`.
+
 ## 4. RGB adjust — fine step + hold-to-repeat
 - **Step = 1** for Hue / Saturation / Brightness / Speed (finest control). Defined in `q1_he/config.h`.
 - **Hold to repeat:** holding an adjust key ramps continuously (~28 ms/step) and saves on release. Tap = 1 nudge, hold = sweep. (`process_record_user` + `housekeeping_task_user` in `keymap.c`.)
@@ -92,7 +94,8 @@ In `q1_he/config.h` (seconds):
 |---------|----------|--------|
 | `MS_ACC4` | layer 1 · F4 | mouse speed 1.0× |
 | `MS_ACC5` | layer 1 · F5 | mouse speed 2.0× |
-| `LT_CLEAR` | layer 1 · Backspace | clear the letter/marquee buffer |
+| `LT_CLEAR` | **Win Fn (layer 3)** · Backspace | clear the letter/marquee buffer |
+| `MS_INF8` | layer 1 · F6 | toggle the figure-8 auto mouse mover |
 
 ## Files changed
 - `keyboards/keychron/common/rgb/letters.c`, `spider_mask.c` *(new)* + `rgb_matrix_kb.inc`, `rgb.mk` — letter + Spider-Man effects

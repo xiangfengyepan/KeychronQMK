@@ -23,14 +23,26 @@
 
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
+#include <math.h>
 
 // Capture typed keys for the LETTERS_MARQUEE / LETTERS_BIG RGB effects.
 extern void letters_process_record(uint16_t keycode, keyrecord_t *record);
 extern void letters_clear(void); // wipe the marquee / letter buffer
 
 // Extra persistent mouse-speed levels (beyond built-in ACCEL0/1/2).
-extern void mousekey_set_accel_level(uint8_t level);
-enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR };
+extern void    mousekey_set_accel_level(uint8_t level);
+extern uint8_t mousekey_get_offset(void);
+enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_INF8 };
+
+// Infinity (figure-8) auto mouse mover — toggle with MS_INF8 (Fn+F6).
+// Fixed size; speed follows the active mouse-accel level (Fn+F1..F5).
+#define INF8_INTERVAL 12 // ms per step
+#define INF8_W 70.0f     // width (px)
+#define INF8_H 130.0f    // height (px); taller => vertical "8" starting downward
+static bool     inf8_on    = false;
+static uint16_t inf8_timer = 0;
+static float    inf8_theta = 0;
+static float    inf8_ax = 0, inf8_ay = 0; // fractional movement accumulators
 
 // Hold-to-repeat for the RGB adjust keys (step is 1, so a hold ramps smoothly).
 #define RGB_HOLD_INTERVAL 28 // ms between repeats while a key is held
@@ -80,8 +92,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x00E0, 0x7E00, 0x7E02, 0x0000, 0x0000, 0x0000, 0x002C, 0x0000, 0x0000, 0x7E03, 0x5221, 0x00E4, 0x0050, 0x0051, 0x004F },
     },
     [1] = {
-        { 0x0000, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
-        { 0x5242, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, LT_CLEAR, 0x00D9 },
+        { 0x0000, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, MS_INF8, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
+        { 0x5242, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D9 },
         { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
         { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
         { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00CD },
@@ -97,7 +109,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     },
     [3] = {
         { 0x5241, 0x00BE, 0x00BD, 0x7E06, 0x7E07, 0x7828, 0x7827, 0x00AC, 0x00AE, 0x00AB, 0x00A8, 0x00AA, 0x00A9, 0x0046, 0x00D3 },
-        { 0x5241, 0x7E0B, 0x7E0C, 0x7E0D, 0x7E0E, 0x7700, 0x7701, 0x7702, 0x7703, 0x7704, 0x7705, 0x7706, 0x7707, 0x0001, 0x0049 },
+        { 0x5241, 0x7E0B, 0x7E0C, 0x7E0D, 0x7E0E, 0x7700, 0x7701, 0x7702, 0x7703, 0x7704, 0x7705, 0x7706, 0x7707, LT_CLEAR, 0x0049 },
         { 0x7820, 0x7821, 0x7827, 0x7823, 0x7825, 0x7829, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x00D1, 0x0001 },
         { 0x0001, 0x7822, 0x7828, 0x7824, 0x7826, 0x782A, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x004D, 0x0000 },
         { 0x0001, 0x0001, 0x7E10, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
@@ -124,8 +136,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case MS_ACC5: // layer 1, F5: 2.0x -> speed level index 5 (mkspd_4)
             if (record->event.pressed) mousekey_set_accel_level(5);
             return false;
-        case LT_CLEAR: // layer 1, Backspace: reset the marquee / letter buffer
+        case LT_CLEAR: // Win Fn (layer 3), Backspace: reset the marquee / letter buffer
             if (record->event.pressed) letters_clear();
+            return false;
+        case MS_INF8: // layer 1, F6: toggle the figure-8 auto mouse mover
+            if (record->event.pressed) {
+                inf8_on    = !inf8_on;
+                inf8_theta = 0;
+                inf8_ax = inf8_ay = 0;
+                inf8_timer = timer_read();
+            }
             return false;
         case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
         case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:
@@ -153,6 +173,28 @@ void housekeeping_task_user(void) {
     if (adj_check_kc) { // one-shot check after a tap (value already applied)
         limit_check(adj_check_kc);
         adj_check_kc = 0;
+    }
+
+    if (inf8_on && timer_elapsed(inf8_timer) > INF8_INTERVAL) {
+        inf8_timer  = timer_read();
+        uint8_t off = mousekey_get_offset();
+        if (off == 0) off = 1;
+        float dth = 0.02f + off * 0.004f; // step size scales with accel level
+        float t1  = inf8_theta + dth;
+        // vertical lemniscate: x = (W/2)*sin(2t), y = H*sin(t); starts at center
+        inf8_ax += (INF8_W * 0.5f) * (sinf(2 * t1) - sinf(2 * inf8_theta));
+        inf8_ay += INF8_H * (sinf(t1) - sinf(inf8_theta));
+        inf8_theta = t1;
+        if (inf8_theta > 6.28318f) inf8_theta -= 6.28318f;
+        int8_t mx = (int8_t)inf8_ax, my = (int8_t)inf8_ay;
+        inf8_ax -= mx;
+        inf8_ay -= my;
+        if (mx || my) {
+            report_mouse_t rep = {0};
+            rep.x = mx;
+            rep.y = my;
+            host_mouse_send(&rep);
+        }
     }
 }
 

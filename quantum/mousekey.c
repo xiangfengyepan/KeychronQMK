@@ -600,6 +600,11 @@ void mousekey_set_accel_level(uint8_t level) {
     }
 }
 
+// Current cursor offset (px/report) for the active speed level.
+uint8_t mousekey_get_offset(void) {
+    return (uint8_t)c_offsets[mk_speed];
+}
+
 void mousekey_on(uint8_t code) {
     uint16_t const c_offset  = c_offsets[mk_speed];
     uint16_t const w_offset  = w_offsets[mk_speed];
