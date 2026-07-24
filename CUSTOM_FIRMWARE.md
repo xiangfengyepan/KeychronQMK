@@ -22,7 +22,7 @@ Source: `keyboards/keychron/common/rgb/letters.c` (registered in `common/rgb/rgb
 |--------|----|-----------|
 | **Letters Marquee** | 25 | Your typed text scrolls right → left. Remembers the last **20** characters. |
 | **Letters Big** | 26 | The last key you pressed is drawn large in the center, then fades. |
-| **Spider-Man** | 27 | Red mask with two white angular eyes (occasional blink); each keypress fires a quick white web-burst. Source: `common/rgb/spider_mask.c`. |
+| **Spider-Man** | 27 | Red mask with two white angular eyes (occasional blink); each keypress fires a quick white web-burst. **Power-on default** (`RGB_MATRIX_DEFAULT_MODE`). Source: `common/rgb/spider_mask.c`. |
 
 - Select by cycling RGB modes (they're the last two effects) or from the VIA Effect dropdown.
 - Speed (marquee scroll) follows the global RGB speed (Fn+T / Fn+G).

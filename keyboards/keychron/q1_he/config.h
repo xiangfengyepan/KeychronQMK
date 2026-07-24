@@ -82,6 +82,9 @@
 #define RGB_MATRIX_VAL_STEP 1
 #define RGB_MATRIX_SPD_STEP 1
 
+/* Power on into the Spider-Man mask effect (applies on EEPROM reset). */
+#define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_CUSTOM_SPIDER_MASK
+
 /* Mouse keys: 5 persistent speed levels, ASCENDING (tap to lock a speed).
  * OFFSET = pixels per report (higher = faster); INTERVAL = ms between reports.
  * On the Fn layer, left to right F1..F5 = slowest .. fastest. */
