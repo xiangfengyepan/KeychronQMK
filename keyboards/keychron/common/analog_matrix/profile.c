@@ -333,6 +333,13 @@ bool profile_reset(uint8_t prof_index) {
         prof->global.mode               = AKM_RAPID;
         prof->global.act_pt             = GAMING_ACTUATION_POINT;
         prof->global.rpd_trig_sen_deact = prof->global.rpd_trig_sen = GAMING_RAPID_TRIGGER_SENSITIVITY;
+        // SOCD: last-input wins on A<->D and W<->S for clean counter-strafing (Valorant).
+        prof->socd[0].key_1_row = 3; prof->socd[0].key_1_col = 1; // A
+        prof->socd[0].key_2_row = 3; prof->socd[0].key_2_col = 3; // D
+        prof->socd[0].type      = SOCD_PRI_LAST_KEYSTROKE;
+        prof->socd[1].key_1_row = 2; prof->socd[1].key_1_col = 2; // W
+        prof->socd[1].key_2_row = 3; prof->socd[1].key_2_col = 2; // S
+        prof->socd[1].type      = SOCD_PRI_LAST_KEYSTROKE;
     }
 #endif
 #ifdef TYPING_PROFILE_INDEX
