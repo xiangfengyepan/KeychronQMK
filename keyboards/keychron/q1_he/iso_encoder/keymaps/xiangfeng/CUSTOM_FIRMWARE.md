@@ -58,6 +58,7 @@ F1–F3 are QMK's built-in `KC_MS_ACCEL0/1/2`; F4/F5 are custom keycodes. Scroll
   - **6** star · **7** heart · **8** spirograph · **9** spiral · **0** lissajous
   - Plain custom keycodes (not DKS): Keychron's official DKS can only emit real keystrokes, so it can't drive a firmware routine and custom firmware never appears in the Launcher. Dropped from the old set: vertical-8, wave, pentagon, rose. Relative movement in `housekeeping_task_user` (`host_mouse_send`); speed from `mousekey_get_offset()`.
 - **Full-screen DVD bounce** — **layer 1 · F9** (`MS_DVD`): tap to launch a bouncing-logo path, tap to stop. Uses the **absolute digitizer** (`digitizer_set_position`, screen fractions 0–1) so it bounces off the **real screen edges at any resolution**. Needs `DIGITIZER_ENABLE`/`DIGITIZER_SHARED_EP`.
+- **Stop all mouse animation** — **layer 3 · Space** (`MS_STOP`, Windows Fn + Space): one press halts whatever mouse routine is running — a shape mover, the DVD bounce, or an in-progress IME character draw — and releases the left button if a stroke was mid-draw.
 
 ## 4. RGB adjust — fine step + hold-to-repeat
 - **Step = 1** for Hue / Saturation / Brightness / Speed (finest control). Defined in `q1_he/config.h`.
@@ -107,6 +108,7 @@ In `q1_he/config.h` (seconds):
 | `MS_SH1`…`MS_SH0` | layer 1 · 1–0 | shape movers: ∞ / circle / triangle / square / hexagon / star / heart / spirograph / spiral / lissajous |
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
 | `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 209-char baked dictionary (`hanzi_data.c`). |
+| `MS_STOP` | layer 3 · Space | stop any running mouse animation (shape mover / DVD bounce / IME draw); releases the button if mid-stroke |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 ## Files changed
