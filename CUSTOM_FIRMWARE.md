@@ -12,6 +12,12 @@ qmk compile -kb keychron/q1_he/iso_encoder -km keychron
 
 Flash the `.bin` with **QMK Toolbox** on Windows (DFU: switch to *Cable*, hold the reset button under the space bar or **Esc** while plugging in; WinUSB driver via Zadig once).
 
+## Documentation
+- **[KEYMAP.md](KEYMAP.md)** — layers, custom keys, mouse speed / shape movers / name-drawing, RGB adjust keys, and the custom-keycode table.
+- **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–27).
+
+This file is the overview of everything; the two above go deeper on keymap and lighting.
+
 ---
 
 ## 1. Typed-letter RGB effects
@@ -25,8 +31,8 @@ Source: `keyboards/keychron/common/rgb/letters.c` (registered in `common/rgb/rgb
 | **Spider-Man** | 27 | Red mask with two white angular eyes (occasional blink); each keypress fires a quick white web-burst. **Power-on default** (`RGB_MATRIX_DEFAULT_MODE`). Source: `common/rgb/spider_mask.c`. |
 
 - Select by cycling RGB modes (they're the last two effects) or from the VIA Effect dropdown.
-- Speed (marquee scroll) follows the global RGB speed (Fn+T / Fn+G).
-- **Reset the buffer:** **Fn + Backspace** (`LT_CLEAR`). Nothing clears automatically — the text stays until you clear it.
+- Speed (marquee scroll) follows the global RGB speed (layer 1 · T / G).
+- **Reset the buffer:** **layer 3 · Backspace** (`LT_CLEAR`, Windows Fn). Nothing clears automatically — the text stays until you clear it.
 - Letters are intentionally coarse (one LED per staggered key).
 
 ## 2. Baked keymap
@@ -34,27 +40,32 @@ The `keychron` keymap (`.../keymaps/keychron/keymap.c`) is your exact **Keychron
 
 ## 3. Mouse keys — 5 persistent speed levels
 `MK_3_SPEED` extended from 3 → 5 levels (`quantum/mousekey.c`), **tap to lock** a speed (no holding).
-On **layer 1 (hold Fn), keys F1–F5**, ascending:
+On **layer 1, keys F1–F5** (hold Fn to reach layer 1), ascending:
 
 | Key | Level | Speed |
 |-----|-------|-------|
-| Fn + F1 | acc0 | 0.1× |
-| Fn + F2 | acc1 | 0.2× |
-| Fn + F3 | acc2 | 0.4× |
-| Fn + F4 | acc4 (`MS_ACC4`) | 1.0× |
-| Fn + F5 | acc5 (`MS_ACC5`) | 2.0× |
+| layer 1 · F1 | acc0 | 0.1× |
+| layer 1 · F2 | acc1 | 0.2× |
+| layer 1 · F3 | acc2 | 0.4× |
+| layer 1 · F4 | acc4 (`MS_ACC4`) | 1.0× |
+| layer 1 · F5 | acc5 (`MS_ACC5`) | 2.0× |
 | power-on default | — | 1.0× |
 
 F1–F3 are QMK's built-in `KC_MS_ACCEL0/1/2`; F4/F5 are custom keycodes. Scroll-wheel speed scales to the same ratios. Values in `q1_he/config.h` (`MK_C_OFFSET_*`).
 
-- **Figure-8 auto-mover:** **Fn+F6** (`MS_INF8`) toggles a continuous ∞ (figure-8) cursor motion that starts at the center (vertical "8", downward). Fixed size; speed follows the active accel level (F1–F5). Press again to stop. Implemented as a background routine in `housekeeping_task_user` sending relative mouse reports (`host_mouse_send`); the current speed comes from `mousekey_get_offset()`.
+- **Auto mouse-shape mover** — 4 keys via **DKS (press-depth)**: press a key to a depth and release; **how deep** you press picks the shape (light → deep). Press the active shape's depth again to stop. Speed follows the accel level (F1–F5); size fixed.
+  - **layer 1 · F6** — vertical-8 · horizontal-∞ · wave · spiral
+  - **layer 1 · F7** — circle · triangle · square · pentagon
+  - **layer 1 · F8** — star · heart · rose · lissajous
+  - **layer 1 · F9** — hexagon · DVD-bounce · spirograph
+  Reads `analog_matrix_get_travel`; all four depth bands are easiest to hit on a shallow-actuation profile. Background routine in `housekeeping_task_user` (`host_mouse_send`); speed from `mousekey_get_offset()`.
 
 ## 4. RGB adjust — fine step + hold-to-repeat
 - **Step = 1** for Hue / Saturation / Brightness / Speed (finest control). Defined in `q1_he/config.h`.
 - **Hold to repeat:** holding an adjust key ramps continuously (~28 ms/step) and saves on release. Tap = 1 nudge, hold = sweep. (`process_record_user` + `housekeeping_task_user` in `keymap.c`.)
 - **Min/max feedback:** the board flashes **red** when **saturation / brightness / speed** reaches its limit. Hue wraps around, so it has no min/max and never flashes. (`rgb_matrix_indicators_advanced_user` in `keymap.c`.)
 
-| Setting | Fn keys | Range | Step | Default |
+| Setting | Keys (layer 1) | Range | Step | Default |
 |---------|---------|-------|------|---------|
 | Hue | E / D | 0–255 (wraps) | 1 | 0 |
 | Saturation | R / F | 0–255 | 1 | 255 |
@@ -71,7 +82,7 @@ Actuation/sensitivity units = 0.1 mm; travel range 0.5–4.0 mm.
 | Profile 2 | 1 | Rapid Trigger | 1.2 mm | 0.2 mm | Valorant / gaming |
 | Profile 3 | 2 | (unchanged) | — | — | Xbox gamepad mapping |
 
-> These apply on an EEPROM/profile reset. SOCD ("Snap Tap") was intentionally **not** baked (anti-cheat risk). Per-key HE calibration stays per-unit (auto-calibrates).
+> These apply on an EEPROM/profile reset. **SOCD** (last-input wins on **A↔D** and **W↔S**) is baked into the gaming profile for clean counter-strafing. ⚠️ Snap-Tap-style SOCD is **banned in some titles** (CS2); Valorant hasn't explicitly banned it but Vanguard could treat it as a ToS violation — **account risk**. Per-key HE calibration stays per-unit (auto-calibrates).
 
 ## 6. Power-management timeouts (baked defaults)
 In `q1_he/config.h` (seconds):
@@ -94,8 +105,12 @@ In `q1_he/config.h` (seconds):
 |---------|----------|--------|
 | `MS_ACC4` | layer 1 · F4 | mouse speed 1.0× |
 | `MS_ACC5` | layer 1 · F5 | mouse speed 2.0× |
-| `LT_CLEAR` | **Win Fn (layer 3)** · Backspace | clear the letter/marquee buffer |
-| `MS_INF8` | layer 1 · F6 | toggle the figure-8 auto mouse mover |
+| `MS_DK6` | layer 1 · F6 | DKS press-depth: 8 / ∞ / wave / spiral |
+| `MS_DK7` | layer 1 · F7 | DKS press-depth: circle / triangle / square / pentagon |
+| `MS_DK8` | layer 1 · F8 | DKS press-depth: star / heart / rose / lissajous |
+| `MS_DK9` | layer 1 · F9 | DKS press-depth: hexagon / DVD / spirograph |
+| `MS_DRAW` | layer 1 · F10 | draw 祥沣 with the mouse in a paint app (pen up/down per stroke) |
+| `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 ## Files changed
 - `keyboards/keychron/common/rgb/letters.c`, `spider_mask.c` *(new)* + `rgb_matrix_kb.inc`, `rgb.mk` — letter + Spider-Man effects

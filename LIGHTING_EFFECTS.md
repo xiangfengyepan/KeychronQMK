@@ -1,6 +1,6 @@
 # Q1 HE (ISO) — Lighting effect order
 
-Order of the RGB effects as cycled with **Fn+Q** (next) / **Fn+A** (previous), and as
+Order of the RGB effects as cycled with **layer 1 · Q** (next) / **layer 1 · A** (previous), and as
 selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last three are custom.
 
 **Default power-on effect: Spider-Man (#27)** — set via `RGB_MATRIX_DEFAULT_MODE` in `q1_he/config.h`; applies on an EEPROM reset.
@@ -32,16 +32,16 @@ selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last three are custo
 | 22 | Solid Splash | reactive | |
 | 23 | Per Key RGB | Keychron custom | per-key colors |
 | 24 | Mix RGB | Keychron custom | layered regions |
-| **25** | **Letters Marquee** | **custom · reactive** | typed text scrolls L→R (Fn+Backspace clears) |
+| **25** | **Letters Marquee** | **custom · reactive** | typed text scrolls L→R (layer 3 · Backspace clears) |
 | **26** | **Letters Big** | **custom · reactive** | last key drawn big, fades |
 | **27** | **Spider-Man** ⭐ | **custom · reactive** | red mask + white eyes + blink; web-burst on keypress — **power-on default** |
 
 **Selecting effects**
-- On the keyboard: **Fn+Q / Fn+A** to cycle. The three custom effects (25–27) are at the end,
-  so **Fn+A** from the first effect wraps straight to Spider-Man (27).
+- On the keyboard: **layer 1 · Q / A** to cycle. The three custom effects (25–27) are at the end,
+  so **layer 1 · A** from the first effect wraps straight to Spider-Man (27).
 - In VIA (usevia.app, with the custom definition loaded): Lighting → Effect dropdown lists all
   of the above by name.
 
 **Adjusting the active effect** (step = 1, hold to repeat):
-Fn+E/D hue · Fn+R/F saturation · Fn+W/S brightness · Fn+T/G speed.
+layer 1 · E/D hue · layer 1 · R/F saturation · layer 1 · W/S brightness · layer 1 · T/G speed.
 The board flashes **red** when saturation/brightness/speed hits its min or max (hue wraps, so no limit).
