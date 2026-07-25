@@ -3,7 +3,7 @@
 Order of the RGB effects as cycled with **layer 1 · Q** (next) / **layer 1 · A** (previous), and as
 selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last three are custom.
 
-**Default power-on effect: Spider-Man (#27)** — set via `RGB_MATRIX_DEFAULT_MODE` in `q1_he/config.h`; applies on an EEPROM reset.
+**Default power-on effect: Spider-Man (#27)** — set via `RGB_MATRIX_DEFAULT_MODE` in this folder's `config.h`; applies on an EEPROM reset.
 
 | # | Effect | Type | Notes |
 |---|--------|------|-------|

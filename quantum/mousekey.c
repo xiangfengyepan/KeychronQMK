@@ -605,6 +605,11 @@ uint8_t mousekey_get_offset(void) {
     return (uint8_t)c_offsets[mk_speed];
 }
 
+// Current speed level (so momentary "boost" keys can save/restore it).
+uint8_t mousekey_get_accel_level(void) {
+    return mk_speed;
+}
+
 void mousekey_on(uint8_t code) {
     uint16_t const c_offset  = c_offsets[mk_speed];
     uint16_t const w_offset  = w_offsets[mk_speed];

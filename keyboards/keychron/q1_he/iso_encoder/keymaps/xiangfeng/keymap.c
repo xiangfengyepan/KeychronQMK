@@ -35,11 +35,13 @@ extern void letters_clear(void); // wipe the marquee / letter buffer
 // Extra persistent mouse-speed levels (beyond built-in ACCEL0/1/2).
 extern void    mousekey_set_accel_level(uint8_t level);
 extern uint8_t mousekey_get_offset(void);
+extern uint8_t mousekey_get_accel_level(void);
 enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DVD,
                        MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5,
                        MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0,
                        IME_TOGG, // pinyin IME on/off (Fn+I)
-                       MS_STOP }; // stop any running mouse animation (Win Fn + Space)
+                       MS_STOP,  // stop any running mouse animation (Win Fn + Space)
+                       MS_BOOST }; // hold to boost mouse speed to F4/1.0x (Win Fn + LShift)
 
 // Auto mouse-shape mover. One shape per number key (layer 1 · 1..0):
 //   tap = start that shape, tap the same key again = stop.
@@ -335,7 +337,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x00E0, 0x7E00, 0x7E02, 0x0000, 0x0000, 0x0000, 0x002C, 0x0000, 0x0000, 0x7E03, 0x5221, 0x00E4, 0x0050, 0x0051, 0x004F },
     },
     [1] = {
-        { 0x5242, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, MS_DVD, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
+        { 0x5242, 0x00DD, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, 0x0000, MS_DVD, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
         { 0x5242, MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5, MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0, 0x0000, 0x0000, 0x0000, 0x00D9 },
         { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, IME_TOGG, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
         { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
@@ -355,8 +357,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x0001, 0x7E0B, 0x7E0C, 0x7E0D, 0x7E0E, 0x7700, 0x7701, 0x7702, 0x7703, 0x7704, 0x7705, 0x7706, 0x7707, LT_CLEAR, 0x0049 },
         { 0x7820, 0x7821, 0x7827, 0x7823, 0x7825, 0x7829, 0x0001, 0x0001, IME_TOGG, 0x0001, 0x0001, 0x0001, 0x0001, 0x00D1, 0x0001 },
         { 0x0001, 0x7822, 0x7828, 0x7824, 0x7826, 0x782A, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x004D, 0x0000 },
-        { 0x0001, 0x0001, 0x7E10, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
-        { 0x0001, 0x0001, 0x0001, 0x0000, 0x0000, 0x0000, MS_STOP, 0x0000, 0x0000, 0x00D2, 0x0001, 0x0001, 0x00CF, 0x00CE, 0x00D0 },
+        { MS_BOOST, 0x0001, 0x7E10, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
+        { 0x00D4, 0x0001, 0x00D5, 0x0000, 0x0000, 0x0000, MS_STOP, 0x0000, 0x0000, 0x00D2, 0x0001, 0x0001, 0x00CF, 0x00CE, 0x00D0 },
     },
 };
 // clang-format on
@@ -400,10 +402,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         limit_flash_timer = timer_read();
     }
     switch (keycode) {
-        case MS_ACC4: // layer 1, F4: 1.0x -> speed level index 4 (mkspd_3)
+        case MS_ACC4: // layer 1, F3: 1.0x -> speed level index 4 (mkspd_3)
             if (record->event.pressed) mousekey_set_accel_level(4);
             return false;
-        case MS_ACC5: // layer 1, F5: 2.0x -> speed level index 5 (mkspd_4)
+        case MS_ACC5: // layer 1, F4: 2.0x -> speed level index 5 (mkspd_4)
             if (record->event.pressed) mousekey_set_accel_level(5);
             return false;
         case LT_CLEAR: // Win Fn (layer 3), Backspace: reset the marquee / letter buffer
@@ -427,6 +429,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 if (draw_on) { draw_on = false; report_mouse_t rel = {0}; host_mouse_send(&rel); } // release the button mid-stroke
             }
             return false;
+        case MS_BOOST: { // Win Fn (layer 3) LShift: HOLD to boost speed to F4 (1.0x); restore on release
+            static uint8_t boost_prev = 4;
+            if (record->event.pressed) { boost_prev = mousekey_get_accel_level(); mousekey_set_accel_level(4); }
+            else                       { mousekey_set_accel_level(boost_prev); }
+            return false;
+        }
         case IME_TOGG: // Fn+I: toggle the pinyin IME
             if (record->event.pressed) {
                 ime_on = !ime_on;

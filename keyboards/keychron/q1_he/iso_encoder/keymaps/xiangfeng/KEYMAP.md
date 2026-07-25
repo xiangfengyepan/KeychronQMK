@@ -19,15 +19,16 @@ matrix), so a fresh flash boots with the configured layout; VIA/Launcher can sti
 > mode Fn → layer 3, where those keys are stock RGB/profile keys — so they only fire in **Mac** mode.
 > The marquee-clear is the exception (on **Win Fn**). Ask to mirror the cluster to layer 3 if needed.
 
-## Mouse cursor speed — 5 levels (persistent)
-`MK_3_SPEED`, tap to lock a speed. **layer 1 · F1–F5**, ascending: **0.1× / 0.2× / 0.4× / 1× / 2×**.
-F1–F3 are QMK built-ins (`KC_MS_ACCEL0/1/2`); F4/F5 are custom (`MS_ACC4/MS_ACC5`). Scroll-wheel
-scales the same way. Speeds set in `q1_he/config.h` (`MK_C_OFFSET_*`).
+## Mouse cursor speed — 4 levels (persistent)
+`MK_3_SPEED`, tap to lock a speed. **layer 1 · F1–F4**, ascending: **0.1× / 0.4× / 1× / 2×**.
+F1 / F2 are QMK built-ins (`KC_MS_ACCEL0` / `KC_MS_ACCEL2`); F3 / F4 are custom (`MS_ACC4` / `MS_ACC5`).
+Scroll-wheel scales the same way. Speeds set in this folder's `config.h` (`MK_C_OFFSET_*`).
+(The 0.2× level still exists internally but no key selects it; F5 is unmapped.)
 
 ## Auto mouse-shape mover — 10 shapes on the number row
 One shape per **number key** on **layer 1 (Mac Fn)**: **tap to start**, **tap the same key again to
 stop**. Only one runs at a time; starting another switches to it. Traversal speed follows the mouse
-accel level (layer 1 · F1–F5); size is fixed. Paths live in `shp_pos()`; speed from
+accel level (layer 1 · F1–F4); size is fixed. Paths live in `shp_pos()`; speed from
 `mousekey_get_offset()`.
 
 | Key | Shape | | Key | Shape |
@@ -49,11 +50,11 @@ accel level (layer 1 · F1–F5); size is fixed. Paths live in `shp_pos()`; spee
 Tap **F9** to launch the classic bouncing-logo path; tap again to stop. Unlike the number-row
 shapes (which move the cursor **relatively**), this uses the **absolute digitizer report**
 (`digitizer_set_position`, x/y as screen fractions 0–1), so it bounces off the **real screen edges
-at any resolution** — no need to know the pixel size. Pace follows the mouse-accel level (F1–F5).
+at any resolution** — no need to know the pixel size. Pace follows the mouse-accel level (F1–F4).
 
 > Requires `DIGITIZER_ENABLE`/`DIGITIZER_SHARED_EP` (in `rules.mk`); the board exposes an extra
-> absolute-pointer HID interface. It maps to the primary display. Starting a number-row shape or the
-> name-drawing stops the bounce, and vice-versa.
+> absolute-pointer HID interface. It maps to the primary display. Starting a number-row shape or an
+> IME character draw stops the bounce, and vice-versa; **layer 3 · Space** (`MS_STOP`) stops it too.
 
 ## Pinyin IME — type a character, draw it with the mouse
 **Fn + I** (`IME_TOGG`, on both Mac Fn layer 1 and Win Fn layer 3) toggles a baked **pinyin input
@@ -98,8 +99,8 @@ Nothing clears automatically.
 ## Custom keycodes
 | Keycode | Location | Action |
 |---|---|---|
-| `MS_ACC4` | layer 1 · F4 | mouse speed 1.0× |
-| `MS_ACC5` | layer 1 · F5 | mouse speed 2.0× |
+| `MS_ACC4` | layer 1 · F3 | mouse speed 1.0× |
+| `MS_ACC5` | layer 1 · F4 | mouse speed 2.0× |
 | `MS_SH1` | layer 1 · 1 | shape mover: ∞ infinity |
 | `MS_SH2` | layer 1 · 2 | shape mover: circle |
 | `MS_SH3` | layer 1 · 3 | shape mover: triangle |
@@ -113,11 +114,14 @@ Nothing clears automatically.
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
 | `IME_TOGG` | layer 1 · I / layer 3 · I | toggle the pinyin IME (Fn+I) |
 | `MS_STOP` | layer 3 · Space | stop any running mouse animation (shape / DVD bounce / IME draw) |
+| `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores your speed on release |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 Custom keycodes show as **"Unknown"** in VIA — don't remap those keys there or you lose the feature.
 
 ## Layer-3 notes (Win Fn)
+- **Ctrl / Alt = mouse buttons 4 / 5** (`KC_MS_BTN4` / `KC_MS_BTN5`, back / forward) — mirrors the Mac Fn layer.
+- **Space = `MS_STOP`** (stop mouse animation) · **LShift = `MS_BOOST`** (hold-boost speed) · **I = `IME_TOGG`**.
 - **Esc = `DF(1)`** (from the Launcher export; sets default layer → 1). *Not* the Keychron default
   (`_______`). Kept per user request.
 - **`~` = `_______`** (transparent) — restored to the Keychron default.
