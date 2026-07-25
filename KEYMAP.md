@@ -24,21 +24,36 @@ matrix), so a fresh flash boots with the configured layout; VIA/Launcher can sti
 F1–F3 are QMK built-ins (`KC_MS_ACCEL0/1/2`); F4/F5 are custom (`MS_ACC4/MS_ACC5`). Scroll-wheel
 scales the same way. Speeds set in `q1_he/config.h` (`MK_C_OFFSET_*`).
 
-## Auto mouse-shape mover — DKS (press-depth)
-Press a key to a **depth** and release; how deep you pressed picks the shape (**light → deep = 1st →
-last**). Press to the active shape's depth again to stop. Uses the Hall-Effect travel reading
-(`analog_matrix_get_travel`); traversal speed follows the accel level (F1–F5); size fixed.
+## Auto mouse-shape mover — 10 shapes on the number row
+One shape per **number key** on **layer 1 (Mac Fn)**: **tap to start**, **tap the same key again to
+stop**. Only one runs at a time; starting another switches to it. Traversal speed follows the mouse
+accel level (layer 1 · F1–F5); size is fixed. Paths live in `shp_pos()`; speed from
+`mousekey_get_offset()`.
 
-| Key | light … deep |
-|---|---|
-| **layer 1 · F6** | vertical-8 · horizontal-∞ · wave · spiral |
-| **layer 1 · F7** | circle · triangle · square · pentagon |
-| **layer 1 · F8** | star · heart · rose · lissajous |
-| **layer 1 · F9** | hexagon · DVD-bounce · spirograph |
+| Key | Shape | | Key | Shape |
+|---|---|---|---|---|
+| **layer 1 · 1** | ∞ infinity (horizontal) | | **layer 1 · 6** | ★ star (5-point) |
+| **layer 1 · 2** | ● circle | | **layer 1 · 7** | ♥ heart |
+| **layer 1 · 3** | ▲ triangle | | **layer 1 · 8** | spirograph |
+| **layer 1 · 4** | ■ square | | **layer 1 · 9** | spiral |
+| **layer 1 · 5** | ⬡ hexagon | | **layer 1 · 0** | lissajous (3:2) |
 
-> Depth bands read from **actuation → bottom**, so all four are easiest to reach on a
-> **shallow-actuation** profile (e.g. the gaming / rapid-trigger one). On a deep 2.6 mm profile
-> you'd only reach the last ~2. Paths live in `shp_pos()`; speed from `mousekey_get_offset()`.
+> **Why normal keys, not DKS?** Keychron's official DKS can only emit real keystrokes/modifiers
+> (`report_action` in `action_okmc.c` only handles basic/modifier keycodes) — it can't trigger a
+> firmware routine like a shape mover, and custom firmware can't appear in the Launcher. So the
+> shapes are plain custom keycodes on the number row instead.
+>
+> **Dropped** (were redundant/weakest): vertical figure-8, wave, pentagon, rose.
+
+## Full-screen DVD bounce — layer 1 · F9 (`MS_DVD`)
+Tap **F9** to launch the classic bouncing-logo path; tap again to stop. Unlike the number-row
+shapes (which move the cursor **relatively**), this uses the **absolute digitizer report**
+(`digitizer_set_position`, x/y as screen fractions 0–1), so it bounces off the **real screen edges
+at any resolution** — no need to know the pixel size. Pace follows the mouse-accel level (F1–F5).
+
+> Requires `DIGITIZER_ENABLE`/`DIGITIZER_SHARED_EP` (in `rules.mk`); the board exposes an extra
+> absolute-pointer HID interface. It maps to the primary display. Starting a number-row shape or the
+> name-drawing stops the bounce, and vice-versa.
 
 ## Draw 祥沣
 **layer 1 · F10** (`MS_DRAW`) — tap to draw the two characters with the cursor, one stroke at a time.
@@ -66,10 +81,17 @@ Nothing clears automatically.
 |---|---|---|
 | `MS_ACC4` | layer 1 · F4 | mouse speed 1.0× |
 | `MS_ACC5` | layer 1 · F5 | mouse speed 2.0× |
-| `MS_DK6` | layer 1 · F6 | DKS press-depth shapes: 8 / ∞ / wave / spiral |
-| `MS_DK7` | layer 1 · F7 | DKS press-depth shapes: circle / triangle / square / pentagon |
-| `MS_DK8` | layer 1 · F8 | DKS press-depth shapes: star / heart / rose / lissajous |
-| `MS_DK9` | layer 1 · F9 | DKS press-depth shapes: hexagon / DVD / spirograph |
+| `MS_SH1` | layer 1 · 1 | shape mover: ∞ infinity |
+| `MS_SH2` | layer 1 · 2 | shape mover: circle |
+| `MS_SH3` | layer 1 · 3 | shape mover: triangle |
+| `MS_SH4` | layer 1 · 4 | shape mover: square |
+| `MS_SH5` | layer 1 · 5 | shape mover: hexagon |
+| `MS_SH6` | layer 1 · 6 | shape mover: star |
+| `MS_SH7` | layer 1 · 7 | shape mover: heart |
+| `MS_SH8` | layer 1 · 8 | shape mover: spirograph |
+| `MS_SH9` | layer 1 · 9 | shape mover: spiral |
+| `MS_SH0` | layer 1 · 0 | shape mover: lissajous |
+| `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
 | `MS_DRAW` | layer 1 · F10 | draw 祥沣 in a paint app (pen up/down per stroke) |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 

@@ -23,6 +23,7 @@
 
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
+#include "digitizer.h" // absolute pointer, for the full-screen DVD bounce
 #include <math.h>
 
 // Capture typed keys for the LETTERS_MARQUEE / LETTERS_BIG RGB effects.
@@ -32,29 +33,33 @@ extern void letters_clear(void); // wipe the marquee / letter buffer
 // Extra persistent mouse-speed levels (beyond built-in ACCEL0/1/2).
 extern void    mousekey_set_accel_level(uint8_t level);
 extern uint8_t mousekey_get_offset(void);
-enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DRAW, MS_DK6, MS_DK7, MS_DK8, MS_DK9 };
+enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DRAW, MS_DVD,
+                       MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5,
+                       MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0 };
 
-// Auto mouse-shape mover. Each key has a shape group:
-//   tap = start/stop the current shape,  double-tap = cycle to the next shape.
+// Auto mouse-shape mover. One shape per number key (layer 1 · 1..0):
+//   tap = start that shape, tap the same key again = stop.
 // Fixed size; traversal speed follows the mouse-accel level (F1..F5).
-//   F6: vertical-8 -> horizontal-∞ -> wave -> spiral -> DVD-bounce
-//   F7: circle -> triangle -> square -> pentagon -> hexagon
-//   F8: star -> heart -> rose -> lissajous -> spirograph
-enum { SHP_OFF = 0, SHP_INF, SHP_INFH, SHP_WAVE, SHP_SPIRAL, SHP_DVD,
+//   1 ∞infinity  2 circle  3 triangle  4 square  5 hexagon
+//   6 star       7 heart   8 spirograph 9 spiral 0 lissajous
+// Separately, layer 1 · F9 = full-screen DVD bounce (absolute, see dvd_*).
+enum { SHP_OFF = 0, SHP_INF, SHP_INFH, SHP_WAVE, SHP_SPIRAL,
        SHP_CIRCLE, SHP_TRI, SHP_SQUARE, SHP_PENTA, SHP_HEX,
        SHP_STAR, SHP_HEART, SHP_ROSE, SHP_LISS, SHP_SPIRO };
 #define SHP_INTERVAL 12 // ms per step
 static uint8_t  shp_active = SHP_OFF;
 static uint16_t shp_timer  = 0;
 static float    shp_theta  = 0;
-static float    shp_ax = 0, shp_ay = 0;                             // fractional movement accumulators
-static float    dvd_x = 0, dvd_y = 0, dvd_vx = 0.8f, dvd_vy = 0.55f; // DVD-bounce state
-static bool     draw_on = false;                                    // "draw my name" (祥沣) active
-// DKS groups: shape chosen by how deep you press (max 4 per key).
-static const uint8_t shp_grp6[] = {SHP_INF, SHP_INFH, SHP_WAVE, SHP_SPIRAL};    // F6 (4)
-static const uint8_t shp_grp7[] = {SHP_CIRCLE, SHP_TRI, SHP_SQUARE, SHP_PENTA}; // F7 (4)
-static const uint8_t shp_grp8[] = {SHP_STAR, SHP_HEART, SHP_ROSE, SHP_LISS};    // F8 (4)
-static const uint8_t shp_grp9[] = {SHP_HEX, SHP_DVD, SHP_SPIRO};                // F9 (3, overflow)
+static float    shp_ax = 0, shp_ay = 0; // fractional movement accumulators
+static bool     draw_on = false;        // "draw my name" (祥沣) active
+
+// Full-screen DVD bounce (layer 1 · F9). Uses the absolute digitizer report:
+// x/y are screen fractions [0,1], so it bounces off the REAL screen edges at any
+// resolution (the firmware can't read the pixel size, but 0..1 spans the screen).
+static bool     dvd_on = false;
+static uint16_t dvd_timer = 0;
+static float    dvd_px = 0.10f, dvd_py = 0.10f;   // position, screen fraction
+static float    dvd_vx = 0.0060f, dvd_vy = 0.0043f; // velocity per tick
 
 static void shp_poly_v(uint8_t n, float r, uint8_t k, float *vx, float *vy) {
     float a = -1.5708f + (6.28318f / n) * k; // top vertex at start (0,0), centre (0,r)
@@ -146,60 +151,60 @@ static void shp_pos(uint8_t s, float th, float *ox, float *oy) {
     *oy = y0 + (y1 - y0) * f;
 }
 
+static void dvd_stop(void) {
+    if (dvd_on) {
+        dvd_on = false;
+        digitizer_in_range_off(); // lift the absolute pointer
+    }
+}
+
 static void shp_start(uint8_t s) {
     shp_active = s;
     shp_theta  = 0;
     shp_ax = shp_ay = 0;
     shp_timer = timer_read();
     draw_on   = false; // shapes and name-drawing are mutually exclusive
-    if (s == SHP_DVD) { dvd_x = dvd_y = 0; dvd_vx = 0.8f; dvd_vy = 0.55f; }
+    dvd_stop();        // ...and the full-screen bounce
 }
 
-// DKS (press-distance) shape select: press the key to a depth and release; how
-// deep you pressed picks the shape (light -> deep = 1st -> last in the group).
-// Tapping the same shape again stops it. Uses the Hall-Effect travel reading.
-extern uint8_t analog_matrix_get_travel(uint8_t row, uint8_t col);
-static bool           dep_mon = false;
-static uint8_t        dep_row = 0, dep_col = 0, dep_max = 0, dep_len = 0;
-static const uint8_t *dep_grp = NULL;
-
-static void dks_press(keyrecord_t *record, const uint8_t *grp, uint8_t len) {
-    dep_mon = true;
-    dep_row = record->event.key.row;
-    dep_col = record->event.key.col;
-    dep_max = 0;
-    dep_grp = grp;
-    dep_len = len;
-}
-static void dks_release(void) {
-    dep_mon = false;
-    if (!dep_grp) return;
-    int16_t v = (int16_t)dep_max - 10; // usable band ~ travel 10..40
-    if (v < 0) v = 0;
-    uint8_t band = (uint8_t)((uint16_t)v * dep_len / 31);
-    if (band >= dep_len) band = dep_len - 1;
-    uint8_t s = dep_grp[band];
+// One shape per key: tap starts it, tap the same key again stops it.
+static void shp_toggle(uint8_t s) {
     if (shp_active == s)
-        shp_active = SHP_OFF; // pressing to the active shape's depth again = stop
+        shp_active = SHP_OFF;
     else
         shp_start(s);
 }
 
+// Full-screen DVD bounce toggle (layer 1 · F9).
+static void dvd_toggle(void) {
+    if (dvd_on) {
+        dvd_stop();
+    } else {
+        shp_active = SHP_OFF; // one auto-mover at a time
+        draw_on    = false;
+        dvd_on     = true;
+        dvd_timer  = timer_read();
+        digitizer_in_range_on();
+    }
+}
+
 // --- "Draw my name" 祥沣 with the mouse, one stroke at a time (pen up/down) ---
-// Each stroke is a short polyline in a shared grid; the routine holds the left
-// mouse button while drawing a stroke and lifts it between strokes, so it draws
-// in a paint app. Stroke order is approximate. Toggle with MS_DRAW (layer 1 · F9).
+// The routine holds the left mouse button while tracing a stroke and lifts it
+// between strokes, so it draws in a paint app. Toggle with MS_DRAW (layer 1 · F10).
+// Coordinates are real stroke medians from Make Me a Hanzi (skishore/makemeahanzi),
+// in canonical stroke order, mapped into the drawing grid (x -> right, y -> down)
+// and scaled to ~115 units tall. 祥 = 礻(4) + 羊(6),  沣 = 氵(3) + 丰(4) = 17 strokes.
 static const int16_t DRAW_X[] = {
-    -130,-122, -150,-115,-128, -132,-132, -118,-108,        // 礻
-    -55,-68, -30,-40, -72,-18, -72,-18, -78,-12, -45,-45,   // 羊
-    15,23, 8,16, 6,24,                                      // 氵
-    55,127, 50,132, 92,92, 52,130};                         // 丰
+    -95,-86,-84,  -117,-114,-109,-97,-91,-84,-87,-102,-111,-123,  -96,-94,-94,-96,-95,  -88,-79,-76,   // 礻
+    -66,-57,-55,  -34,-31,-46,  -67,-64,-59,-33,-25,  -66,-59,-43,-34,-28,  -78,-74,-70,-55,-20,-10,  -52,-48,-49,   // 羊
+    22,34,37,  10,21,24,  18,17,17,21,37,   // 氵
+    51,54,61,80,93,96,100,  51,54,61,80,95,100,  40,44,50,68,102,108,115,  67,71,76,75,74};              // 丰
 static const int16_t DRAW_Y[] = {
-    -50,-42, -30,-30,-16, -30,50, 0,8,
-    -52,-36, -52,-36, -28,-28, -8,-8, 14,14, -52,52,
-    -45,-37, -12,-4, 20,8,
-    -32,-32, -2,-2, -50,55, 28,28};
-static const uint8_t DRAW_LEN[] = {2,3,2,2, 2,2,2,2,2,2, 2,2,2, 2,2,2,2};
+    -53,-46,-42,  -20,-19,-19,-23,-25,-25,-17,4,15,24,  2,9,30,41,47,  -3,1,5,   // 礻
+    -50,-43,-38,  -57,-53,-35,  -25,-24,-25,-30,-31,  -7,-6,-9,-11,-11,  13,14,13,10,6,8,  -22,-19,57,   // 羊
+    -47,-39,-34,  -21,-14,-10,  48,43,36,29,0,   // 氵
+    -26,-25,-25,-28,-32,-32,-31,  -6,-5,-5,-8,-11,-10,  16,17,17,13,10,10,12,  -58,-57,-52,-35,58};       // 丰
+static const uint8_t DRAW_LEN[] = {3,10,5,3, 3,3,5,5,6,3, 3,3,5, 7,6,7,5};
 #define DRAW_NSTROKE (sizeof(DRAW_LEN))
 
 static uint8_t  draw_s = 0, draw_p = 0, draw_phase = 0; // phase 0=pen-up move, 1=drawing, 2=final release
@@ -208,6 +213,7 @@ static float    draw_cx = 0, draw_cy = 0, draw_fx = 0, draw_fy = 0;
 
 static void draw_start(void) {
     shp_active = SHP_OFF; // don't run a shape at the same time
+    dvd_stop();
     draw_on = !draw_on;   // toggle
     draw_s = draw_p = draw_phase = 0;
     draw_base = 0;
@@ -263,8 +269,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x00E0, 0x7E00, 0x7E02, 0x0000, 0x0000, 0x0000, 0x002C, 0x0000, 0x0000, 0x7E03, 0x5221, 0x00E4, 0x0050, 0x0051, 0x004F },
     },
     [1] = {
-        { 0x0000, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, MS_DK6, MS_DK7, MS_DK8, MS_DK9, MS_DRAW, 0x0000, 0x0000, 0x0000, 0x00D3 },
-        { 0x5242, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D9 },
+        { 0x5242, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, MS_DVD, MS_DRAW, 0x0000, 0x0000, 0x0000, 0x00D3 },
+        { 0x5242, MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5, MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0, 0x0000, 0x0000, 0x0000, 0x00D9 },
         { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
         { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
         { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00CD },
@@ -300,6 +306,11 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     letters_process_record(keycode, record);
+    // Red flash (same as the RGB min/max feedback) when the default layer changes.
+    if (record->event.pressed && keycode >= QK_DEF_LAYER && keycode <= QK_DEF_LAYER_MAX) {
+        limit_flash       = true;
+        limit_flash_timer = timer_read();
+    }
     switch (keycode) {
         case MS_ACC4: // layer 1, F4: 1.0x -> speed level index 4 (mkspd_3)
             if (record->event.pressed) mousekey_set_accel_level(4);
@@ -310,11 +321,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case LT_CLEAR: // Win Fn (layer 3), Backspace: reset the marquee / letter buffer
             if (record->event.pressed) letters_clear();
             return false;
-        case MS_DK6: if (record->event.pressed) dks_press(record, shp_grp6, 4); else dks_release(); return false; // F6
-        case MS_DK7: if (record->event.pressed) dks_press(record, shp_grp7, 4); else dks_release(); return false; // F7
-        case MS_DK8: if (record->event.pressed) dks_press(record, shp_grp8, 4); else dks_release(); return false; // F8
-        case MS_DK9: if (record->event.pressed) dks_press(record, shp_grp9, 3); else dks_release(); return false; // F9
-        case MS_DRAW: if (record->event.pressed) draw_start(); return false; // F10: draw 祥沣
+        case MS_SH1: if (record->event.pressed) shp_toggle(SHP_INFH);   return false; // 1  ∞ infinity
+        case MS_SH2: if (record->event.pressed) shp_toggle(SHP_CIRCLE); return false; // 2  circle
+        case MS_SH3: if (record->event.pressed) shp_toggle(SHP_TRI);    return false; // 3  triangle
+        case MS_SH4: if (record->event.pressed) shp_toggle(SHP_SQUARE); return false; // 4  square
+        case MS_SH5: if (record->event.pressed) shp_toggle(SHP_HEX);    return false; // 5  hexagon
+        case MS_SH6: if (record->event.pressed) shp_toggle(SHP_STAR);   return false; // 6  star
+        case MS_SH7: if (record->event.pressed) shp_toggle(SHP_HEART);  return false; // 7  heart
+        case MS_SH8: if (record->event.pressed) shp_toggle(SHP_SPIRO);  return false; // 8  spirograph
+        case MS_SH9: if (record->event.pressed) shp_toggle(SHP_SPIRAL); return false; // 9  spiral
+        case MS_SH0: if (record->event.pressed) shp_toggle(SHP_LISS);   return false; // 0  lissajous
+        case MS_DVD:  if (record->event.pressed) dvd_toggle();  return false; // F9: full-screen DVD bounce
+        case MS_DRAW: if (record->event.pressed) draw_start();  return false; // F10: draw 祥沣
         case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
         case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:
             if (record->event.pressed) {
@@ -343,36 +361,32 @@ void housekeeping_task_user(void) {
         adj_check_kc = 0;
     }
 
-    if (dep_mon) { // track how deep a DKS shape key is pressed
-        uint8_t t = analog_matrix_get_travel(dep_row, dep_col);
-        if (t > dep_max) dep_max = t;
+    if (dvd_on && timer_elapsed(dvd_timer) > SHP_INTERVAL) { // full-screen bounce
+        dvd_timer   = timer_read();
+        uint8_t off = mousekey_get_offset();
+        if (off == 0) off = 1;
+        float spd = 0.5f + off * 0.05f; // pace follows the mouse-accel level (F1..F5)
+        dvd_px += dvd_vx * spd;
+        dvd_py += dvd_vy * spd;
+        if (dvd_px <= 0.0f)      { dvd_px = 0.0f; dvd_vx = -dvd_vx; }
+        else if (dvd_px >= 1.0f) { dvd_px = 1.0f; dvd_vx = -dvd_vx; }
+        if (dvd_py <= 0.0f)      { dvd_py = 0.0f; dvd_vy = -dvd_vy; }
+        else if (dvd_py >= 1.0f) { dvd_py = 1.0f; dvd_vy = -dvd_vy; }
+        digitizer_set_position(dvd_px, dvd_py); // absolute -> bounces off real edges
     }
 
     if (shp_active && timer_elapsed(shp_timer) > SHP_INTERVAL) {
         shp_timer   = timer_read();
         uint8_t off = mousekey_get_offset();
         if (off == 0) off = 1;
-        if (shp_active == SHP_DVD) { // bounce inside a virtual box
-            float spd = 1.5f + off * 0.25f;
-            float ox = dvd_x, oy = dvd_y;
-            dvd_x += dvd_vx * spd;
-            if (dvd_x > 90.0f)  { dvd_x = 180.0f - dvd_x;  dvd_vx = -dvd_vx; }
-            if (dvd_x < -90.0f) { dvd_x = -180.0f - dvd_x; dvd_vx = -dvd_vx; }
-            dvd_y += dvd_vy * spd;
-            if (dvd_y > 90.0f)  { dvd_y = 180.0f - dvd_y;  dvd_vy = -dvd_vy; }
-            if (dvd_y < -90.0f) { dvd_y = -180.0f - dvd_y; dvd_vy = -dvd_vy; }
-            shp_ax += dvd_x - ox;
-            shp_ay += dvd_y - oy;
-        } else {
-            float dth = 0.02f + off * 0.004f; // step size scales with accel level
-            float t0 = shp_theta, t1 = t0 + dth;
-            float x0, y0, x1, y1;
-            shp_pos(shp_active, t0, &x0, &y0);
-            shp_pos(shp_active, t1, &x1, &y1); // sinf/mod are periodic, so t1 > 2pi is fine
-            shp_ax += (x1 - x0);
-            shp_ay += (y1 - y0);
-            shp_theta = (t1 > 6.28318f) ? t1 - 6.28318f : t1;
-        }
+        float dth = 0.02f + off * 0.004f; // step size scales with accel level
+        float t0 = shp_theta, t1 = t0 + dth;
+        float x0, y0, x1, y1;
+        shp_pos(shp_active, t0, &x0, &y0);
+        shp_pos(shp_active, t1, &x1, &y1); // sinf/mod are periodic, so t1 > 2pi is fine
+        shp_ax += (x1 - x0);
+        shp_ay += (y1 - y0);
+        shp_theta = (t1 > 6.28318f) ? t1 - 6.28318f : t1;
         int8_t mx = (int8_t)shp_ax, my = (int8_t)shp_ay;
         shp_ax -= mx;
         shp_ay -= my;

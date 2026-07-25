@@ -53,12 +53,11 @@ On **layer 1, keys F1–F5** (hold Fn to reach layer 1), ascending:
 
 F1–F3 are QMK's built-in `KC_MS_ACCEL0/1/2`; F4/F5 are custom keycodes. Scroll-wheel speed scales to the same ratios. Values in `q1_he/config.h` (`MK_C_OFFSET_*`).
 
-- **Auto mouse-shape mover** — 4 keys via **DKS (press-depth)**: press a key to a depth and release; **how deep** you press picks the shape (light → deep). Press the active shape's depth again to stop. Speed follows the accel level (F1–F5); size fixed.
-  - **layer 1 · F6** — vertical-8 · horizontal-∞ · wave · spiral
-  - **layer 1 · F7** — circle · triangle · square · pentagon
-  - **layer 1 · F8** — star · heart · rose · lissajous
-  - **layer 1 · F9** — hexagon · DVD-bounce · spirograph
-  Reads `analog_matrix_get_travel`; all four depth bands are easiest to hit on a shallow-actuation profile. Background routine in `housekeeping_task_user` (`host_mouse_send`); speed from `mousekey_get_offset()`.
+- **Auto mouse-shape mover** — 10 shapes on the **number row** (layer 1 · **1**–**0**): **tap to start**, tap the same key again to stop. One at a time. Speed follows the accel level (F1–F5); size fixed.
+  - **1** ∞ infinity · **2** circle · **3** triangle · **4** square · **5** hexagon
+  - **6** star · **7** heart · **8** spirograph · **9** spiral · **0** lissajous
+  - Plain custom keycodes (not DKS): Keychron's official DKS can only emit real keystrokes, so it can't drive a firmware routine and custom firmware never appears in the Launcher. Dropped from the old set: vertical-8, wave, pentagon, rose. Relative movement in `housekeeping_task_user` (`host_mouse_send`); speed from `mousekey_get_offset()`.
+- **Full-screen DVD bounce** — **layer 1 · F9** (`MS_DVD`): tap to launch a bouncing-logo path, tap to stop. Uses the **absolute digitizer** (`digitizer_set_position`, screen fractions 0–1) so it bounces off the **real screen edges at any resolution**. Needs `DIGITIZER_ENABLE`/`DIGITIZER_SHARED_EP`.
 
 ## 4. RGB adjust — fine step + hold-to-repeat
 - **Step = 1** for Hue / Saturation / Brightness / Speed (finest control). Defined in `q1_he/config.h`.
@@ -105,10 +104,8 @@ In `q1_he/config.h` (seconds):
 |---------|----------|--------|
 | `MS_ACC4` | layer 1 · F4 | mouse speed 1.0× |
 | `MS_ACC5` | layer 1 · F5 | mouse speed 2.0× |
-| `MS_DK6` | layer 1 · F6 | DKS press-depth: 8 / ∞ / wave / spiral |
-| `MS_DK7` | layer 1 · F7 | DKS press-depth: circle / triangle / square / pentagon |
-| `MS_DK8` | layer 1 · F8 | DKS press-depth: star / heart / rose / lissajous |
-| `MS_DK9` | layer 1 · F9 | DKS press-depth: hexagon / DVD / spirograph |
+| `MS_SH1`…`MS_SH0` | layer 1 · 1–0 | shape movers: ∞ / circle / triangle / square / hexagon / star / heart / spirograph / spiral / lissajous |
+| `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
 | `MS_DRAW` | layer 1 · F10 | draw 祥沣 with the mouse in a paint app (pen up/down per stroke) |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
