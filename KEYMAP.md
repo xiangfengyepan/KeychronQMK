@@ -62,10 +62,10 @@ method**. While it's on, the keyboard is in *compose mode*:
 | Key | Action |
 |---|---|
 | letters | type toneless pinyin (e.g. `feng`) — candidates load as you type (prefix match) |
-| **Win** (left GUI) | previous candidate |
-| **Alt** (left) | next candidate |
-| **Ctrl** (left) | confirm — draws the current character with the mouse |
-| **Backspace** | clear the pinyin and stop the LED animation |
+| **← / →** (or **Tab**) | previous / next candidate |
+| **1–9** | jump straight to candidate N |
+| **Space / Enter** | confirm — draws the current character with the mouse |
+| **Backspace** | delete the last pinyin letter |
 | **Esc** / **Fn + I** | exit IME |
 
 The current candidate is **animated stroke-by-stroke across the RGB LEDs** (green trail, bright head);

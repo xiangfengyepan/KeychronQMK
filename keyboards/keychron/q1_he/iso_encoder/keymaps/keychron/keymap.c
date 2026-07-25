@@ -363,20 +363,26 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 #endif // ENCODER_MAP_ENABLE
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (ime_on) { // compose mode: the bottom-row modifiers drive the IME
+    if (ime_on) { // compose mode: intercept typing, cycling and confirm
         switch (keycode) {
             case IME_TOGG: break; // toggle-off handled in the main switch below
             case KC_ESC:  if (record->event.pressed) { ime_on = false; ime_reset(); } return false; // exit IME
-            case KC_LCTL: if (record->event.pressed) ime_confirm(); return false;                    // Ctrl  = confirm -> draw it
-            case KC_BSPC: if (record->event.pressed) ime_reset();   return false;                    // Bksp  = clear pinyin + stop the LED animation
-            case KC_LGUI: if (record->event.pressed && cand_n) { cand_i = (cand_i + cand_n - 1) % cand_n; ime_led_load(); } return false; // Win = previous
-            case KC_LALT: if (record->event.pressed && cand_n) { cand_i = (cand_i + 1) % cand_n;         ime_led_load(); } return false; // Alt = next
+            case KC_BSPC: if (record->event.pressed && py_len) { py_buf[--py_len] = 0; ime_update(); } return false; // delete a letter
+            case KC_SPC:
+            case KC_ENT:  if (record->event.pressed) ime_confirm(); return false;                    // Space/Enter = confirm -> draw
+            case KC_TAB:
+            case KC_RGHT: if (record->event.pressed && cand_n) { cand_i = (cand_i + 1) % cand_n; ime_led_load(); } return false;         // next
+            case KC_LEFT: if (record->event.pressed && cand_n) { cand_i = (cand_i + cand_n - 1) % cand_n; ime_led_load(); } return false; // previous
             default:
+                if (keycode >= KC_1 && keycode <= KC_9) { // pick candidate N directly
+                    if (record->event.pressed) { uint8_t k = keycode - KC_1; if (k < cand_n) { cand_i = k; ime_confirm(); } }
+                    return false;
+                }
                 if (keycode >= KC_A && keycode <= KC_Z) { // build the pinyin buffer
                     if (record->event.pressed && py_len < PY_MAX) { py_buf[py_len++] = 'a' + (keycode - KC_A); py_buf[py_len] = 0; ime_update(); }
                     return false;
                 }
-                break; // Shift / Fn / other keys pass through (so Fn+I can toggle off)
+                break; // modifiers / Fn / layer keys pass through (so Fn+I can toggle off)
         }
     }
     letters_process_record(keycode, record);

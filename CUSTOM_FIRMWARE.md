@@ -106,7 +106,7 @@ In `q1_he/config.h` (seconds):
 | `MS_ACC5` | layer 1 · F5 | mouse speed 2.0× |
 | `MS_SH1`…`MS_SH0` | layer 1 · 1–0 | shape movers: ∞ / circle / triangle / square / hexagon / star / heart / spirograph / spiral / lissajous |
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
-| `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (Win/Alt), Ctrl confirms → draws the character with the mouse. 209-char baked dictionary (`hanzi_data.c`). |
+| `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 209-char baked dictionary (`hanzi_data.c`). |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 ## Files changed
