@@ -24,7 +24,9 @@
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
 #include "digitizer.h" // absolute pointer, for the full-screen DVD bounce
+#include "hanzi_data.h" // baked pinyin -> stroke-median dictionary (IME)
 #include <math.h>
+#include <string.h>
 
 // Capture typed keys for the LETTERS_MARQUEE / LETTERS_BIG RGB effects.
 extern void letters_process_record(uint16_t keycode, keyrecord_t *record);
@@ -33,9 +35,10 @@ extern void letters_clear(void); // wipe the marquee / letter buffer
 // Extra persistent mouse-speed levels (beyond built-in ACCEL0/1/2).
 extern void    mousekey_set_accel_level(uint8_t level);
 extern uint8_t mousekey_get_offset(void);
-enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DRAW, MS_DVD,
+enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DVD,
                        MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5,
-                       MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0 };
+                       MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0,
+                       IME_TOGG }; // pinyin IME on/off (Fn+I)
 
 // Auto mouse-shape mover. One shape per number key (layer 1 · 1..0):
 //   tap = start that shape, tap the same key again = stop.
@@ -188,33 +191,22 @@ static void dvd_toggle(void) {
     }
 }
 
-// --- "Draw my name" 祥沣 with the mouse, one stroke at a time (pen up/down) ---
-// The routine holds the left mouse button while tracing a stroke and lifts it
-// between strokes, so it draws in a paint app. Toggle with MS_DRAW (layer 1 · F10).
-// Coordinates are real stroke medians from Make Me a Hanzi (skishore/makemeahanzi),
-// in canonical stroke order, mapped into the drawing grid (x -> right, y -> down)
-// and scaled to ~115 units tall. 祥 = 礻(4) + 羊(6),  沣 = 氵(3) + 丰(4) = 17 strokes.
-static const int16_t DRAW_X[] = {
-    -95,-86,-84,  -117,-114,-109,-97,-91,-84,-87,-102,-111,-123,  -96,-94,-94,-96,-95,  -88,-79,-76,   // 礻
-    -66,-57,-55,  -34,-31,-46,  -67,-64,-59,-33,-25,  -66,-59,-43,-34,-28,  -78,-74,-70,-55,-20,-10,  -52,-48,-49,   // 羊
-    22,34,37,  10,21,24,  18,17,17,21,37,   // 氵
-    51,54,61,80,93,96,100,  51,54,61,80,95,100,  40,44,50,68,102,108,115,  67,71,76,75,74};              // 丰
-static const int16_t DRAW_Y[] = {
-    -53,-46,-42,  -20,-19,-19,-23,-25,-25,-17,4,15,24,  2,9,30,41,47,  -3,1,5,   // 礻
-    -50,-43,-38,  -57,-53,-35,  -25,-24,-25,-30,-31,  -7,-6,-9,-11,-11,  13,14,13,10,6,8,  -22,-19,57,   // 羊
-    -47,-39,-34,  -21,-14,-10,  48,43,36,29,0,   // 氵
-    -26,-25,-25,-28,-32,-32,-31,  -6,-5,-5,-8,-11,-10,  16,17,17,13,10,10,12,  -58,-57,-52,-35,58};       // 丰
-static const uint8_t DRAW_LEN[] = {3,10,5,3, 3,3,5,5,6,3, 3,3,5, 7,6,7,5};
-#define DRAW_NSTROKE (sizeof(DRAW_LEN))
-
+// --- Mouse character-drawing engine (drives the pinyin IME "confirm") ---
+// Traces a glyph's stroke polylines with the mouse, holding the left button
+// during a stroke and lifting it between strokes, so it draws in a paint app.
+// The glyph is supplied by the IME (dr_* pointers) via draw_begin().
 static uint8_t  draw_s = 0, draw_p = 0, draw_phase = 0; // phase 0=pen-up move, 1=drawing, 2=final release
 static uint16_t draw_base = 0, draw_timer = 0;
 static float    draw_cx = 0, draw_cy = 0, draw_fx = 0, draw_fy = 0;
+static const int16_t *dr_x = NULL, *dr_y = NULL;
+static const uint8_t *dr_len = NULL;
+static uint8_t        dr_ns = 0;
 
-static void draw_start(void) {
-    shp_active = SHP_OFF; // don't run a shape at the same time
+static void draw_begin(const int16_t *x, const int16_t *y, const uint8_t *len, uint8_t ns) {
+    shp_active = SHP_OFF; // don't run a shape or the bounce at the same time
     dvd_stop();
-    draw_on = !draw_on;   // toggle
+    dr_x = x; dr_y = y; dr_len = len; dr_ns = ns;
+    draw_on = true;
     draw_s = draw_p = draw_phase = 0;
     draw_base = 0;
     draw_cx = draw_cy = draw_fx = draw_fy = 0;
@@ -258,6 +250,72 @@ static void limit_check(uint16_t kc) {
     if (rgb_at_limit(kc)) { limit_flash = true; limit_flash_timer = timer_read(); }
 }
 
+// ---------------- Baked pinyin IME ----------------
+// Fn+I toggles IME mode. While on: type pinyin (letters) -> candidates load;
+// Left/Right (or Tab) cycle; 1-9 jump to a candidate; Space/Enter confirm and
+// draw the character with the mouse; Backspace deletes a letter; Esc cancels.
+// The current candidate is animated stroke-by-stroke across the RGB LEDs.
+#define PY_MAX 7
+#define IME_CAND_MAX 48
+#define IME_LED_MAX 220
+#define IME_LED_SCALE 0.46f // glyph units -> LED grid
+static bool     ime_on = false;
+static char     py_buf[PY_MAX + 1];
+static uint8_t  py_len = 0;
+static uint16_t cand[IME_CAND_MAX];
+static uint8_t  cand_n = 0, cand_i = 0;
+static uint8_t  ime_leds[IME_LED_MAX];
+static uint16_t ime_led_n = 0, ime_led_pos = 0, ime_led_timer = 0;
+
+static uint8_t nearest_led(float lx, float ly) {
+    uint8_t best = 0; float bd = 1e9f;
+    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        float dx = (float)g_led_config.point[i].x - lx;
+        float dy = (float)g_led_config.point[i].y - ly;
+        float d = dx * dx + dy * dy;
+        if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+}
+static void ime_led_add(float gx, float gy) { // map centred glyph point -> LED, append to path
+    uint8_t li = nearest_led(112.0f + gx * IME_LED_SCALE, 32.0f + gy * IME_LED_SCALE);
+    if (ime_led_n < IME_LED_MAX && (ime_led_n == 0 || ime_leds[ime_led_n - 1] != li))
+        ime_leds[ime_led_n++] = li;
+}
+static void ime_led_load(void) { // rasterise the current candidate into an ordered LED path
+    ime_led_n = 0; ime_led_pos = 0; ime_led_timer = timer_read();
+    if (!cand_n) return;
+    const hanzi_t *h = &hanzi_table[cand[cand_i]];
+    uint16_t base = 0;
+    for (uint8_t s = 0; s < h->nstroke; s++) {
+        uint8_t L = h->len[s];
+        ime_led_add(h->x[base], h->y[base]);
+        for (uint8_t p = 1; p < L; p++) {
+            float x1 = h->x[base + p - 1], y1 = h->y[base + p - 1];
+            float x0 = h->x[base + p],     y0 = h->y[base + p];
+            float dx = x0 - x1, dy = y0 - y1;
+            float dist = sqrtf(dx * dx + dy * dy);
+            uint8_t steps = (uint8_t)(dist / 6.0f) + 1;
+            for (uint8_t k = 1; k <= steps; k++) ime_led_add(x1 + dx * (float)k / steps, y1 + dy * (float)k / steps);
+        }
+        base += L;
+    }
+}
+static void ime_update(void) { // rebuild candidate list for the current pinyin prefix
+    cand_n = 0; cand_i = 0;
+    if (py_len)
+        for (uint16_t i = 0; i < hanzi_count && cand_n < IME_CAND_MAX; i++)
+            if (strncmp(hanzi_table[i].py, py_buf, py_len) == 0) cand[cand_n++] = (uint16_t)i;
+    ime_led_load();
+}
+static void ime_reset(void) { py_len = 0; py_buf[0] = 0; cand_n = 0; cand_i = 0; ime_led_n = 0; ime_led_pos = 0; }
+static void ime_confirm(void) {
+    if (!cand_n) return;
+    const hanzi_t *h = &hanzi_table[cand[cand_i]];
+    draw_begin(h->x, h->y, h->len, h->nstroke); // draw it with the mouse
+    ime_reset();                                // ready for the next character
+}
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = {
@@ -269,9 +327,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x00E0, 0x7E00, 0x7E02, 0x0000, 0x0000, 0x0000, 0x002C, 0x0000, 0x0000, 0x7E03, 0x5221, 0x00E4, 0x0050, 0x0051, 0x004F },
     },
     [1] = {
-        { 0x5242, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, MS_DVD, MS_DRAW, 0x0000, 0x0000, 0x0000, 0x00D3 },
+        { 0x5242, 0x00DD, 0x00DE, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, MS_DVD, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
         { 0x5242, MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5, MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0, 0x0000, 0x0000, 0x0000, 0x00D9 },
-        { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
+        { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, IME_TOGG, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
         { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
         { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00CD },
         { 0x00D4, 0x0000, 0x00D5, 0x0000, 0x0000, 0x0000, 0x00D1, 0x0000, 0x0000, 0x00D2, 0x0000, 0x0000, 0x00CF, 0x00CE, 0x00D0 },
@@ -287,7 +345,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [3] = {
         { 0x5241, 0x00BE, 0x00BD, 0x7E06, 0x7E07, 0x7828, 0x7827, 0x00AC, 0x00AE, 0x00AB, 0x00A8, 0x00AA, 0x00A9, 0x0046, 0x00D3 },
         { 0x0001, 0x7E0B, 0x7E0C, 0x7E0D, 0x7E0E, 0x7700, 0x7701, 0x7702, 0x7703, 0x7704, 0x7705, 0x7706, 0x7707, LT_CLEAR, 0x0049 },
-        { 0x7820, 0x7821, 0x7827, 0x7823, 0x7825, 0x7829, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x00D1, 0x0001 },
+        { 0x7820, 0x7821, 0x7827, 0x7823, 0x7825, 0x7829, 0x0001, 0x0001, IME_TOGG, 0x0001, 0x0001, 0x0001, 0x0001, 0x00D1, 0x0001 },
         { 0x0001, 0x7822, 0x7828, 0x7824, 0x7826, 0x782A, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x004D, 0x0000 },
         { 0x0001, 0x0001, 0x7E10, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
         { 0x0001, 0x0001, 0x0001, 0x0000, 0x0000, 0x0000, 0x0001, 0x0000, 0x0000, 0x00D2, 0x0001, 0x0001, 0x00CF, 0x00CE, 0x00D0 },
@@ -305,6 +363,22 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 #endif // ENCODER_MAP_ENABLE
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (ime_on) { // compose mode: the bottom-row modifiers drive the IME
+        switch (keycode) {
+            case IME_TOGG: break; // toggle-off handled in the main switch below
+            case KC_ESC:  if (record->event.pressed) { ime_on = false; ime_reset(); } return false; // exit IME
+            case KC_LCTL: if (record->event.pressed) ime_confirm(); return false;                    // Ctrl  = confirm -> draw it
+            case KC_BSPC: if (record->event.pressed) ime_reset();   return false;                    // Bksp  = clear pinyin + stop the LED animation
+            case KC_LGUI: if (record->event.pressed && cand_n) { cand_i = (cand_i + cand_n - 1) % cand_n; ime_led_load(); } return false; // Win = previous
+            case KC_LALT: if (record->event.pressed && cand_n) { cand_i = (cand_i + 1) % cand_n;         ime_led_load(); } return false; // Alt = next
+            default:
+                if (keycode >= KC_A && keycode <= KC_Z) { // build the pinyin buffer
+                    if (record->event.pressed && py_len < PY_MAX) { py_buf[py_len++] = 'a' + (keycode - KC_A); py_buf[py_len] = 0; ime_update(); }
+                    return false;
+                }
+                break; // Shift / Fn / other keys pass through (so Fn+I can toggle off)
+        }
+    }
     letters_process_record(keycode, record);
     // Red flash (same as the RGB min/max feedback) when the default layer changes.
     if (record->event.pressed && keycode >= QK_DEF_LAYER && keycode <= QK_DEF_LAYER_MAX) {
@@ -332,7 +406,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case MS_SH9: if (record->event.pressed) shp_toggle(SHP_SPIRAL); return false; // 9  spiral
         case MS_SH0: if (record->event.pressed) shp_toggle(SHP_LISS);   return false; // 0  lissajous
         case MS_DVD:  if (record->event.pressed) dvd_toggle();  return false; // F9: full-screen DVD bounce
-        case MS_DRAW: if (record->event.pressed) draw_start();  return false; // F10: draw 祥沣
+        case IME_TOGG: // Fn+I: toggle the pinyin IME
+            if (record->event.pressed) { ime_on = !ime_on; ime_reset(); ime_led_timer = timer_read(); }
+            return false;
         case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
         case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:
             if (record->event.pressed) {
@@ -409,8 +485,8 @@ void housekeeping_task_user(void) {
             if (off == 0) off = 1;
             float   step = 2.0f + off * 0.4f;
             uint8_t btn  = (draw_phase == 1) ? 0x01 : 0x00; // left button while drawing a stroke
-            uint8_t len  = DRAW_LEN[draw_s];
-            float   tx = DRAW_X[draw_base + draw_p], ty = DRAW_Y[draw_base + draw_p];
+            uint8_t len  = dr_len[draw_s];
+            float   tx = dr_x[draw_base + draw_p], ty = dr_y[draw_base + draw_p];
             float   ex = tx - draw_cx, ey = ty - draw_cy;
             float   dist = sqrtf(ex * ex + ey * ey);
             float   mvx, mvy;
@@ -427,7 +503,7 @@ void housekeeping_task_user(void) {
                         draw_base += len;
                         draw_s++;
                         draw_p = 0;
-                        if (draw_s >= DRAW_NSTROKE) draw_phase = 2; // whole name done
+                        if (draw_s >= dr_ns) draw_phase = 2; // whole glyph done
                     }
                 }
             } else {
@@ -451,6 +527,20 @@ void housekeeping_task_user(void) {
 }
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    if (ime_on) { // draw the candidate stroke-by-stroke over the whole board
+        for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 0, 0, 0);
+        if (cand_n) {
+            if (led_min == 0 && timer_elapsed(ime_led_timer) > 55) { // advance once per frame
+                ime_led_timer = timer_read();
+                if (++ime_led_pos > ime_led_n + 6) ime_led_pos = 0; // loop with a short pause
+            }
+            for (uint16_t i = 0; i < ime_led_n && i <= ime_led_pos; i++) rgb_matrix_set_color(ime_leds[i], 0, 170, 120);
+            if (ime_led_pos < ime_led_n) rgb_matrix_set_color(ime_leds[ime_led_pos], 120, 255, 180); // bright head
+        } else { // IME on, no match yet -> faint blue "listening" glow
+            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 0, 6, 12);
+        }
+        return false;
+    }
     if (limit_flash) {
         if (timer_elapsed(limit_flash_timer) < LIMIT_FLASH_MS) {
             for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 255, 0, 0);

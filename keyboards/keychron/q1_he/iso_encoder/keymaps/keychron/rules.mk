@@ -1,3 +1,4 @@
 VIA_ENABLE = yes
 DIGITIZER_ENABLE = yes
 DIGITIZER_SHARED_EP = yes
+SRC += hanzi_data.c

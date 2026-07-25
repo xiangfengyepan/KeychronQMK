@@ -55,10 +55,29 @@ at any resolution** — no need to know the pixel size. Pace follows the mouse-a
 > absolute-pointer HID interface. It maps to the primary display. Starting a number-row shape or the
 > name-drawing stops the bounce, and vice-versa.
 
-## Draw 祥沣
-**layer 1 · F10** (`MS_DRAW`) — tap to draw the two characters with the cursor, one stroke at a time.
-It **holds the left mouse button during a stroke** and lifts between strokes, so run it inside a
-**paint app**. Stroke order and shapes are hand-authored approximations. Tap again to stop.
+## Pinyin IME — type a character, draw it with the mouse
+**Fn + I** (`IME_TOGG`, on both Mac Fn layer 1 and Win Fn layer 3) toggles a baked **pinyin input
+method**. While it's on, the keyboard is in *compose mode*:
+
+| Key | Action |
+|---|---|
+| letters | type toneless pinyin (e.g. `feng`) — candidates load as you type (prefix match) |
+| **Win** (left GUI) | previous candidate |
+| **Alt** (left) | next candidate |
+| **Ctrl** (left) | confirm — draws the current character with the mouse |
+| **Backspace** | clear the pinyin and stop the LED animation |
+| **Esc** / **Fn + I** | exit IME |
+
+The current candidate is **animated stroke-by-stroke across the RGB LEDs** (green trail, bright head);
+a faint blue glow means IME is on but no match yet. On **confirm**, the character is drawn with the
+mouse (same engine as F10) — so **have a paint app focused**. IME stays on after a confirm so you can
+type the next character; Esc or Fn+I leaves.
+
+- **Dictionary:** 209 baked characters (`hanzi_data.c`), real stroke medians from Make Me a Hanzi.
+- Your names are the **first candidate** for their pinyin: `feng`→沣, `pan`→潘, `ye`→叶, `xiang`→祥.
+- ⚠️ **Low-res preview:** the LED grid is ~87 keys, so a complex character is a rough trace, not crisp
+  — you'll rely partly on knowing the cycle order. Coverage is a curated ~200 common characters, not a
+  full IME. To add/adjust characters, regenerate `hanzi_data.c`.
 
 ## RGB adjust keys (on layer 1)
 Step = **1** for all four (fine control); **hold to auto-repeat**; the board flashes **red** when a
@@ -92,7 +111,7 @@ Nothing clears automatically.
 | `MS_SH9` | layer 1 · 9 | shape mover: spiral |
 | `MS_SH0` | layer 1 · 0 | shape mover: lissajous |
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
-| `MS_DRAW` | layer 1 · F10 | draw 祥沣 in a paint app (pen up/down per stroke) |
+| `IME_TOGG` | layer 1 · I / layer 3 · I | toggle the pinyin IME (Fn+I) |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 Custom keycodes show as **"Unknown"** in VIA — don't remap those keys there or you lose the feature.
