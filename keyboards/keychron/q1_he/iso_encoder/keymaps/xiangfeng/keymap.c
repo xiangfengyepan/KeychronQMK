@@ -38,7 +38,8 @@ extern uint8_t mousekey_get_offset(void);
 enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DVD,
                        MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5,
                        MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0,
-                       IME_TOGG }; // pinyin IME on/off (Fn+I)
+                       IME_TOGG, // pinyin IME on/off (Fn+I)
+                       MS_STOP }; // stop any running mouse animation (Win Fn + Space)
 
 // Auto mouse-shape mover. One shape per number key (layer 1 · 1..0):
 //   tap = start that shape, tap the same key again = stop.
@@ -355,7 +356,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x7820, 0x7821, 0x7827, 0x7823, 0x7825, 0x7829, 0x0001, 0x0001, IME_TOGG, 0x0001, 0x0001, 0x0001, 0x0001, 0x00D1, 0x0001 },
         { 0x0001, 0x7822, 0x7828, 0x7824, 0x7826, 0x782A, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x004D, 0x0000 },
         { 0x0001, 0x0001, 0x7E10, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
-        { 0x0001, 0x0001, 0x0001, 0x0000, 0x0000, 0x0000, 0x0001, 0x0000, 0x0000, 0x00D2, 0x0001, 0x0001, 0x00CF, 0x00CE, 0x00D0 },
+        { 0x0001, 0x0001, 0x0001, 0x0000, 0x0000, 0x0000, MS_STOP, 0x0000, 0x0000, 0x00D2, 0x0001, 0x0001, 0x00CF, 0x00CE, 0x00D0 },
     },
 };
 // clang-format on
@@ -419,6 +420,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case MS_SH9: if (record->event.pressed) shp_toggle(SHP_SPIRAL); return false; // 9  spiral
         case MS_SH0: if (record->event.pressed) shp_toggle(SHP_LISS);   return false; // 0  lissajous
         case MS_DVD:  if (record->event.pressed) dvd_toggle();  return false; // F9: full-screen DVD bounce
+        case MS_STOP: // Win Fn (layer 3) Space: stop any running mouse animation (shape / DVD / draw)
+            if (record->event.pressed) {
+                shp_active = SHP_OFF;
+                dvd_stop();
+                if (draw_on) { draw_on = false; report_mouse_t rel = {0}; host_mouse_send(&rel); } // release the button mid-stroke
+            }
+            return false;
         case IME_TOGG: // Fn+I: toggle the pinyin IME
             if (record->event.pressed) {
                 ime_on = !ime_on;

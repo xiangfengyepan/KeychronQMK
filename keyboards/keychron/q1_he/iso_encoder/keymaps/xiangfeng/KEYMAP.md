@@ -112,6 +112,7 @@ Nothing clears automatically.
 | `MS_SH0` | layer 1 · 0 | shape mover: lissajous |
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
 | `IME_TOGG` | layer 1 · I / layer 3 · I | toggle the pinyin IME (Fn+I) |
+| `MS_STOP` | layer 3 · Space | stop any running mouse animation (shape / DVD bounce / IME draw) |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 Custom keycodes show as **"Unknown"** in VIA — don't remap those keys there or you lose the feature.
