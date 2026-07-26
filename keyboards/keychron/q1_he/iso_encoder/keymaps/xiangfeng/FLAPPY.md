@@ -1,0 +1,47 @@
+# Flappy (arcade game)
+
+Flappy Bird on the RGB grid. Part of the on-keyboard arcade — open with **Fn + H**, turn the knob to
+select **FLAPPY**, press the knob to start. Code lives in `arcade.c` (the `flappy_*` / `f_*` functions).
+
+## How it plays
+A **1×1 bird** (gold) sits at a fixed column (**col 2**) while green **pipes** scroll in from the
+right. Each pipe has a **3-tall gap**; steer the bird through it. **+1** per pipe passed.
+
+The bird **hovers in place until your first flap** (classic Flappy), so you get a moment to react. Each
+flap gives an upward nudge; gravity pulls it back down.
+
+- **Ceiling** — bonks harmlessly (the bird just can't go above row 0).
+- **Floor / pipe** — game over.
+
+## Field — 5 tall × scrolling
+- **Height = 5**: matrix **rows 0–4** (top = row 0). The bird's height `f_bt` is a float in `[0, 4]`,
+  rounded to the lit row.
+- **Scroll**: pipes spawn off-screen at logical col 14 and move left; only cols **0–13** are drawn.
+- Collision is purely logical (at col 2), so the missing key at (row 4, col 11) never matters.
+
+## Controls
+| Input | Action |
+|---|---|
+| **Knob press** | flap |
+| **Any key** | also flaps |
+| **Knob hold (~0.5 s)** | quit to the lobby |
+
+## Physics (ported 1:1 from the prototype)
+Frame-rate independent — each tick scales by real elapsed time `s = dt / 16.67`:
+- gravity `f_vy += 0.0022·s`, terminal-capped at `0.13`; flap sets `f_vy = −0.095`.
+- pipe speed starts `0.05` col/frame and creeps up (`+0.000012·dt`); a new pipe every **1600 ms** with
+  a random gap position (`rnd()%3`, so gap spans rows `gap … gap+2`).
+
+A gentle fall (~0.6 s floor-to-floor) that a tap keeps aloft.
+
+## Rendering & score
+- Pipes green, bird gold (`flappy_render`).
+- **Score = pipes passed.** On game-over the board does the arcade **fill sweep**; **20 pipes fills the
+  board** (`game_over(f_score, 2)` → `frac = pipes / 20`), colored by tier (bronze / cyan / gold).
+
+## Tuning (in `arcade.c`)
+- `0.0022f` gravity, `0.13f` terminal cap, `−0.095f` flap impulse — the feel.
+- `1600` respawn ms, `0.05f` start speed, `0.000012f` ramp — pacing.
+- Fill target `score / 20` in `game_over`.
+
+See **[DINO.md](DINO.md)** and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the arcade shell.

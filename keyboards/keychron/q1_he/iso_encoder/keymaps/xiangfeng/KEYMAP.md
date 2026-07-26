@@ -110,9 +110,17 @@ board shows a **dim amber wash** so the state is obvious.
 
 ## Arcade — Fn + H
 **layer 1 · H / layer 3 · H** (`ARCADE`) opens a tiny arcade on the RGB grid. While open it **owns the
-whole board and swallows all keys**; the **knob** is the control (turn = browse/rotate, tap = start,
-**hold ~0.5 s = quit / exit**). Games: **Tetris** and **Topo** — full write-ups in
-[TETRIS.md](TETRIS.md) and [TOPO.md](TOPO.md).
+whole board and swallows all keys**; the **knob** is the shared control (turn = browse/rotate, tap =
+start/action, **hold ~0.5 s = quit / exit**). Six games:
+
+| Game | Play | Controls (beyond knob-hold = quit) | Doc |
+|---|---|---|---|
+| **Tetris** | fit falling tetrominoes | knob turn = rotate · PgUp/PgDn = move · Home = drop | [TETRIS.md](TETRIS.md) |
+| **Topo** | whack-a-mole, sudden death | press the lit key | [TOPO.md](TOPO.md) |
+| **Flappy** | fly through pipe gaps | knob tap **or any key** = flap | [FLAPPY.md](FLAPPY.md) |
+| **Dino** | jump/duck past obstacles | **Space** = jump (tap 2 / hold 3) · **Ctrl** = duck · knob = jump | [DINO.md](DINO.md) |
+| **Memory** | Simon on all keys | repeat the flashed sequence by pressing the keys | [MEMORY_GAME.md](MEMORY_GAME.md) |
+| **Reaction** | reflex test | wait for green, hit **any key** fast; 3 rounds, avg out of 82 | [REACTION.md](REACTION.md) |
 
 ## Custom keycodes
 | Keycode | Location | Action |

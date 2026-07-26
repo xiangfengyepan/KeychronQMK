@@ -20,7 +20,7 @@ Flash the `.bin` with **QMK Toolbox** on Windows (DFU: switch to *Cable*, hold t
 ## Documentation
 - **[KEYMAP.md](KEYMAP.md)** — layers, custom keys, mouse speed / shape movers, RGB adjust keys, the pinyin IME, and the custom-keycode table.
 - **[IME.md](IME.md)** — the Fn+I pinyin input method: how it works end-to-end, the dictionary, and the code path.
-- **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** — the two on-keyboard arcade games (Fn+H).
+- **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** / **[FLAPPY.md](FLAPPY.md)** / **[DINO.md](DINO.md)** / **[MEMORY_GAME.md](MEMORY_GAME.md)** / **[REACTION.md](REACTION.md)** — the six on-keyboard arcade games (Fn+H).
 - **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–27).
 - **[MEMORY.md](MEMORY.md)** — flash / RAM / EEPROM storage map and the firmware size breakdown.
 
@@ -116,13 +116,25 @@ the arcade owns the whole board and **swallows all keys**. The **knob is the dia
 | Knob | Action |
 |---|---|
 | **turn** | browse games (lobby) / rotate the piece CW·CCW (Tetris) |
-| **tap** | start the selected game / return to lobby from the score screen |
+| **tap** | start the selected game / return to lobby from the score screen / **flap (Flappy), jump (Dino)** |
 | **hold ~0.5 s** | quit a game → lobby; hold in the lobby → **exit the arcade** |
 
+In-game the swallowed keys become controls too: **any key = flap** (Flappy), **Space = jump / Ctrl =
+duck** (Dino), press the **lit key** (Topo), **repeat the flashed keys** (Memory), or **hit any key**
+(Reaction).
+
 Flow: **lobby** (game name animates letter-by-letter, a 5×5 LED font) → **3× red countdown** → game →
-**score fill** (lights the board top-left → down; bronze / cyan / gold by score; max 82 keys). Two
-games: **[TETRIS.md](TETRIS.md)** (5×13 well, PgUp/PgDn move, Home hard-drops) and **[TOPO.md](TOPO.md)**
-(whack-a-mole, sudden death, exponential spawn ramp).
+**score fill** (lights the board top-left → down; bronze / cyan / gold by score; max 82 keys). Six
+games:
+
+| Game | One-liner | Doc |
+|---|---|---|
+| **Tetris** | 5×13 well, knob rotates, PgUp/PgDn move, Home drops | [TETRIS.md](TETRIS.md) |
+| **Topo** | whack-a-mole, sudden death, exponential spawn ramp | [TOPO.md](TOPO.md) |
+| **Flappy** | fly through pipe gaps; knob tap or any key = flap | [FLAPPY.md](FLAPPY.md) |
+| **Dino** | Space = jump (tap 2 / hold 3), Ctrl = duck | [DINO.md](DINO.md) |
+| **Memory** | Simon on all 82 keys; repeat the flashed sequence | [MEMORY_GAME.md](MEMORY_GAME.md) |
+| **Reaction** | wait for green, hit any key fast; 3 rounds, avg / 82 | [REACTION.md](REACTION.md) |
 
 ---
 
@@ -138,7 +150,7 @@ games: **[TETRIS.md](TETRIS.md)** (5×13 well, PgUp/PgDn move, Home hard-drops) 
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores the prior speed on release |
 | `BLK_TOGG` | layer 3 · Z | block/lock mode — swallow all keys; Fn+Z again exits; dim amber wash; **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s flash + green F1–F4) without changing the layer |
-| `ARCADE` | layer 1/3 · H | open the on-keyboard arcade (lobby → Tetris / Topo); knob-hold to exit |
+| `ARCADE` | layer 1/3 · H | open the on-keyboard arcade (lobby → Tetris / Topo / Flappy / Dino / Memory / Reaction); knob-hold to exit |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 ## Files
@@ -147,10 +159,10 @@ Everything lives in **`keymaps/xiangfeng/`**:
 - `config.h` — timeouts, RGB steps, mouse speeds, HE-profile defines, default effect
 - `rules.mk` — VIA + digitizer + custom **USER** RGB effects + `SRC` list
 - `hanzi_data.c` / `.h` — the 209-char pinyin → stroke-median dictionary
-- `arcade.c` / `.h` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, score)
+- `arcade.c` / `.h` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, score)
 - `letters.c`, `spider_mask.c` — custom RGB effects; `rgb_matrix_user.inc` registers them
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references
-- docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
+- docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `FLAPPY.md`, `DINO.md`, `MEMORY_GAME.md`, `REACTION.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
 
 Two shared files keep **small in-place patches** (they can't live in a keymap folder):
 - `quantum/mousekey.c` — 3 → 5 speed levels + `mousekey_set_accel_level()` / `mousekey_get_offset()` / `mousekey_get_accel_level()`

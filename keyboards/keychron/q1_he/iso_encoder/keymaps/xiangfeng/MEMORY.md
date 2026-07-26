@@ -19,16 +19,16 @@ Pulled straight from the compiled ELF (`arm-none-eabi-size`):
 
 | Region | Bytes | KB | What it is |
 |--------|------:|---:|------------|
-| `.text` | 113,136 | **~110 KB** | program code (QMK core + all custom logic) |
-| `.rodata` | 48,756 | **~48 KB** | read-only constants — **includes the IME dictionary ≈ 41 KB** |
-| `.data` (flash copy) | 3,108 | **~3 KB** | initial values for RAM variables, stored in flash |
+| `.text` | 116,408 | **~114 KB** | program code (QMK core + all custom logic) |
+| `.rodata` | 48,860 | **~48 KB** | read-only constants — **includes the IME dictionary ≈ 41 KB** |
+| `.data` (flash copy) | 3,116 | **~3 KB** | initial values for RAM variables, stored in flash |
 | `.vectors` | 480 | ~0.5 KB | reset + interrupt vector table |
-| **firmware content** | **165,488** | **~162 KB** | sum of the above |
+| **firmware content** | **168,864** | **~165 KB** | sum of the above |
 | reserved (app offset) | 32,312 | ~32 KB | gap before code — `.text` starts at `0x0800_8000` |
-| **flashed image (`.bin`)** | **197,800** | **~193 KB** | what actually gets written to flash |
+| **flashed image (`.bin`)** | **201,176** | **~196 KB** | what actually gets written to flash |
 
-So of the 256 KB: **~193 KB is the flashed image**, **~12 KB** is the emulated-EEPROM slice, leaving
-**~51 KB free**. The dictionary (`.rodata`, ~41 KB) is the biggest single thing *you* added; the arcade added ~3 KB of code.
+So of the 256 KB: **~196 KB is the flashed image**, **~12 KB** is the emulated-EEPROM slice, leaving
+**~48 KB free**. The dictionary (`.rodata`, ~41 KB) is the biggest single thing *you* added; the arcade added ~6 KB of code across its six games (Tetris, Topo, Flappy, Dino, Memory, Reaction).
 
 ## The memory stack (address map, with KB used)
 
@@ -37,13 +37,13 @@ So of the 256 KB: **~193 KB is the flashed image**, **~12 KB** is the emulated-E
 0x0804_0000 ┌───────────────────────────┐   0x2001_0000 ┌───────────────────────────┐
             │ Emulated EEPROM   ~12 KB  │               │ ▼ stack / heap  ~33 KB    │
 0x0803_D000 ├───────────────────────────┤               │   (free working room)     │
-            │ free              ~51 KB  │               │            ·              │
+            │ free              ~48 KB  │               │            ·              │
             │ ← dictionary grows here   │               ├───────────────────────────┤
 0x0802_F200 ├───────────────────────────┤               │ .bss            ~28 KB    │
             │ .data (init vals)  ~3 KB  │               │ RGB frame buf, IME state, │
             │ .rodata constants ~47 KB  │               │ QMK state (zero-init)     │
             │   • IME dict ~41 KB       │               ├───────────────────────────┤
-            │ .text  code      ~110 KB  │               │ .data           ~3 KB     │
+            │ .text  code      ~114 KB  │               │ .data           ~3 KB     │
 0x0800_8000 ├───────────────────────────┤   0x2000_0000 └───────────────────────────┘
             │ reserved (offset) ~32 KB  │
 0x0800_0000 │ .vectors          ~0.5 KB │           (bootloader is OUTSIDE this,
