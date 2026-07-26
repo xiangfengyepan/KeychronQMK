@@ -3,6 +3,7 @@
 #include "quantum.h"
 #include "rgb_matrix.h"
 #include "include/arcade.h"
+#include "include/palette.h" // named color constants for the game palettes
 #include <string.h>
 #include <math.h>
 
@@ -35,14 +36,14 @@ static bool     knob_down = false, knob_held = false;
 static uint16_t knob_t = 0;
 
 /* ---- games + 5x5 LED font (for the lobby name animation) ---- */
-typedef struct { const char *name; uint8_t r, g, b; uint8_t kind; } game_t; // kind 0=tetris 1=topo 2=flappy 3=dino 4=memory 5=react
-static const game_t GAMES[] = {
-    {"TETRIS", 55,  230, 212, 0},
-    {"TOPO",   255, 46,  136, 1},
-    {"FLAPPY", 255, 210, 40,  2},
-    {"DINO",   150, 240, 170, 3},
-    {"MEMORY", 180, 90,  240, 4},
-    {"REACT",  255, 120, 40,  5},
+typedef struct { const char *name; HSV col; uint8_t kind; } game_t; // kind 0=tetris 1=topo 2=flappy 3=dino 4=memory 5=react
+static const game_t GAMES[] = {                     // accent color = nearest palette constant
+    {"TETRIS", COL_CYAN,        0},
+    {"TOPO",   COL_PINK,        1},
+    {"FLAPPY", COL_GOLD,        2},
+    {"DINO",   COL_GREEN_LIGHT, 3},
+    {"MEMORY", COL_PURPLE,      4},
+    {"REACT",  COL_CORAL,       5},
 };
 #define NGAME (sizeof(GAMES) / sizeof(GAMES[0]))
 static uint8_t sel = 0;
@@ -87,7 +88,7 @@ static void lobby_render(void) {
     uint8_t  n   = strlen(g->name);
     uint32_t per = 560, on = 430;                       // per-letter on/off cadence
     uint32_t t   = timer_elapsed32(lobby_t) % (n * per);
-    if ((t % per) < on) draw_glyph(g->name[t / per], g->r, g->g, g->b);
+    if ((t % per) < on) { RGB c = hsv_to_rgb(g->col); draw_glyph(g->name[t / per], c.r, c.g, c.b); }
 }
 
 /* ---- countdown ---- */
@@ -151,7 +152,8 @@ static const int8_t PIECES[7][4][4][2] = {
  {{{0,0},{1,0},{1,1},{1,2}},{{0,1},{0,2},{1,1},{2,1}},{{1,0},{1,1},{1,2},{2,2}},{{0,1},{1,1},{2,0},{2,1}}}, // J
  {{{0,2},{1,0},{1,1},{1,2}},{{0,1},{1,1},{2,1},{2,2}},{{1,0},{1,1},{1,2},{2,0}},{{0,0},{0,1},{1,1},{2,1}}}, // L
 };
-static const uint8_t PC[8][3] = {{0,0,0},{55,220,220},{230,205,0},{180,0,230},{0,220,0},{230,0,0},{0,80,235},{235,95,0}};
+// tetromino colors = nearest palette constant (index 0 = empty/dark)
+static const HSV PC[8] = {{0,0,0}, COL_CYAN, COL_GOLD, COL_PURPLE, COL_GREEN, COL_RED, COL_BLUE, COL_ORANGE};
 static uint8_t next_piece(void) {
     if (bagi >= 7) {
         for (uint8_t i = 0; i < 7; i++) bag[i] = i;
@@ -197,11 +199,11 @@ static void tetris_tick(void) {
 static void tetris_render(void) {
     for (uint8_t f = 0; f < TLEN; f++)
         for (uint8_t a = 0; a < TWID; a++)
-            if (tb[f][a]) px(a, mcol(a, f), PC[tb[f][a]][0], PC[tb[f][a]][1], PC[tb[f][a]][2]); // empty cells stay dark
+            if (tb[f][a]) { RGB c = hsv_to_rgb(PC[tb[f][a]]); px(a, mcol(a, f), c.r, c.g, c.b); } // empty cells stay dark
     if (plive)
         for (uint8_t k = 0; k < 4; k++) {
             int8_t A = pa + PIECES[pty][prot][k][0], F = pf + PIECES[pty][prot][k][1];
-            if (A >= 0 && A < TWID && F >= 0 && F < TLEN) px(A, mcol(A, F), PC[pty + 1][0], PC[pty + 1][1], PC[pty + 1][2]);
+            if (A >= 0 && A < TWID && F >= 0 && F < TLEN) { RGB c = hsv_to_rgb(PC[pty + 1]); px(A, mcol(A, F), c.r, c.g, c.b); }
         }
 }
 static void tmove(int8_t d) { if (plive && tfits(pty, prot, pf, pa + d)) pa += d; }

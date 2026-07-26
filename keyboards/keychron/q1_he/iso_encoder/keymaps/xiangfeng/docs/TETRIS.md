@@ -2,7 +2,7 @@
 
 Tetris rendered on the RGB grid, played with the board held **vertically**. Part of the on-keyboard
 arcade — open with **Fn + H**, turn the knob to select **TETRIS**, press the knob to start. Code lives
-in `arcade.c` (the `tetris_*` / `t*` functions).
+in `src/arcade.c` (the `tetris_*` / `t*` functions).
 
 ## The well — a true 5 × 13 grid
 Every one of the 65 grid cells maps to a real key, so pieces are always solid and fall to a solid floor.
@@ -66,7 +66,7 @@ Cleared lines shift the stack toward the floor and **gravity speeds up** (−18 
   the whole board** (`game_over(tlines, 0)` → `frac = lines / 15`), colored by tier
   (bronze < 40 % < cyan < 80 % < gold).
 
-## Tuning (in `arcade.c`)
+## Tuning (in `src/arcade.c`)
 - `TLEN` / `TWID` — well size; `mcol(a, f)` — the cell → matrix-column mapping.
 - `grav_ms` start (650) and the `-= 18` speed-up.
 - `KICK[]` — wall-kick offsets.

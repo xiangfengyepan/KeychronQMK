@@ -54,7 +54,7 @@ at any resolution** — no need to know the pixel size. Pace follows the mouse-a
 
 > Requires `DIGITIZER_ENABLE`/`DIGITIZER_SHARED_EP` (in `rules.mk`); the board exposes an extra
 > absolute-pointer HID interface. It maps to the primary display. Starting a number-row shape or an
-> IME character draw stops the bounce, and vice-versa; **layer 3 · Space** (`MS_STOP`) stops it too.
+> IME character draw stops the bounce, and vice-versa; **Fn · Space** (`MS_STOP`, on both layer 1 and layer 3) stops it too.
 
 ## Pinyin IME — type a character, draw it with the mouse
 **Fn + I** (`IME_TOGG`, on both Mac Fn layer 1 and Win Fn layer 3) toggles a baked **pinyin input
@@ -80,18 +80,19 @@ a faint blue glow means IME is on but no match yet. Two on-key meters help you c
 mouse (same engine as F10) — so **have a paint app focused**. IME stays on after a confirm so you can
 type the next character; Esc or Fn+I leaves.
 
-- **Dictionary:** 276 baked characters (`hanzi_data.c`) — the 12 most-common characters for each of the
+- **Dictionary:** 276 baked characters (`src/hanzi_data.c`) — the 12 most-common characters for each of the
   23 usable pinyin initials (all letters except i/u/v). Built from two open datasets: **stroke medians**
   from Make Me a Hanzi (<https://github.com/skishore/makemeahanzi>) and **frequency + pinyin** from
   hanziDB (<https://github.com/ruddfawcett/hanziDB.csv>). Full regeneration steps in [IME.md](IME.md).
 - Your names are the **first candidate** for their pinyin: `feng`→沣, `pan`→潘, `ye`→叶, `xiang`→祥.
 - ⚠️ **Low-res preview:** the LED grid is ~87 keys, so a complex character is a rough trace, not crisp
   — you'll rely partly on knowing the cycle order. Coverage is the 276 most-common characters (12 per pinyin initial), not a
-  full IME. To add/adjust characters, regenerate `hanzi_data.c`.
+  full IME. To add/adjust characters, regenerate `src/hanzi_data.c`.
 
 ## RGB adjust keys (on layer 1)
-Step = **1** for all four (fine control); **hold to auto-repeat**; the board flashes **red** when a
-setting hits min/max (hue wraps, so it never flashes).
+Step = **1** for all four (fine control); a **tap = 1 step**, **hold past ~350 ms = auto-repeat** sweep. Feedback at the
+edges: saturation/brightness/speed **blink red** while pinned at min/max (a blink, not a solid hold); hue is cyclic, so it
+instead **blanks the board once** each time it passes through 0 (hue 0 is red, so a red flash there wouldn't be visible).
 
 | Action | Keys | | Action | Keys |
 |---|---|---|---|---|
@@ -110,7 +111,7 @@ When the **default layer** changes (Fn + Esc → `DF()`), the whole board flashe
 **during that second F1–F4 light green** as a layer meter — the count of green keys = the new layer:
 Mac base = F1, Mac Fn = F1–F2, Win base = F1–F3, Win Fn = F1–F4. Both clear after the second (the
 green is **not** persistent). **Fn + L** (`LAY_SHOW`) fires the same flash any time to *peek* the
-layer without switching — tap and release Fn to read your base (Mac = 1 key, Win = 3). Separate from the short 140 ms **red** flash used for RGB min/max limits.
+layer without switching — tap and release Fn to read your base (Mac = 1 key, Win = 3). Separate from the RGB min/max **blink** and the hue-0 **blackout**.
 
 ## Block / lock mode — Fn + Z
 **layer 3 · Z** (`BLK_TOGG`) toggles a mode where **every keypress is swallowed** — nothing reaches the
@@ -148,7 +149,7 @@ start/action, **hold ~0.5 s = quit / exit**). Six games:
 | `MS_SH0` | layer 1 · 0 | shape mover: lissajous |
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
 | `IME_TOGG` | layer 1 · I / layer 3 · I | toggle the pinyin IME (Fn+I) |
-| `MS_STOP` | layer 3 · Space | stop any running mouse animation (shape / DVD bounce / IME draw) |
+| `MS_STOP` | layer 1 · Space **&** layer 3 · Space | stop any running mouse animation (shape / DVD bounce / IME draw) |
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores your speed on release |
 | `BLK_TOGG` | layer 3 · Z | block/lock mode on/off — swallow all keys (nothing reaches the PC); **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s red flash + green F1–F4) **without** changing the layer |

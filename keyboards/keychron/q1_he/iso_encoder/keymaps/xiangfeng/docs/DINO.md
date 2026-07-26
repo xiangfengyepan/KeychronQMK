@@ -1,7 +1,7 @@
 # Dino (arcade game)
 
 The Chrome offline dinosaur on the RGB grid. Part of the on-keyboard arcade — open with **Fn + H**,
-turn the knob to select **DINO**, press the knob to start. Code lives in `arcade.c` (the `dino_*` /
+turn the knob to select **DINO**, press the knob to start. Code lives in `src/arcade.c` (the `dino_*` /
 `d_*` functions).
 
 ## How it plays
@@ -44,7 +44,7 @@ Frame-rate independent (`s = dt / 16.67`):
 - **Score = obstacles passed.** On game-over the board does the arcade **fill sweep**; **25 obstacles
   fills the board** (`game_over(d_score, 3)` → `frac = passed / 25`), colored by tier.
 
-## Tuning (in `arcade.c`)
+## Tuning (in `src/arcade.c`)
 - `0.03f` gravity, `−0.32f` jump impulse — the feel (lower gravity = more hang time).
 - `rnd()%5 < 2` top-obstacle chance; `850 + rnd()%450` respawn ms; `0.06f` start speed.
 - Fill target `score / 25` in `game_over`.

@@ -19,17 +19,18 @@ Pulled straight from the compiled ELF (`arm-none-eabi-size`):
 
 | Region | Bytes | KB | What it is |
 |--------|------:|---:|------------|
-| `.text` | 117,456 | **~115 KB** | program code (QMK core + all custom logic) |
-| `.rodata` | 63,992 | **~62 KB** | read-only constants — **includes the IME dictionary ≈ 56 KB** |
-| `.data` (flash copy) | 3,116 | **~3 KB** | initial values for RAM variables, stored in flash |
+| `.text` | 121,776 | **~119 KB** | program code (QMK core + all custom logic) |
+| `.rodata` | 64,116 | **~63 KB** | read-only constants — **includes the IME dictionary ≈ 56 KB** |
+| `.data` (flash copy) | 3,120 | **~3 KB** | initial values for RAM variables, stored in flash |
 | `.vectors` | 480 | ~0.5 KB | reset + interrupt vector table |
-| **firmware content** | **185,044** | **~181 KB** | sum of the above |
+| **firmware content** | **189,492** | **~185 KB** | sum of the above |
 | reserved (app offset) | 32,312 | ~32 KB | gap before code — `.text` starts at `0x0800_8000` |
-| **flashed image (`.bin`)** | **217,356** | **~212 KB** | what actually gets written to flash |
+| **flashed image (`.bin`)** | **221,820** | **~217 KB** | what actually gets written to flash |
 
-So of the 256 KB: **~212 KB is the flashed image**, **~12 KB** is the emulated-EEPROM slice, leaving
-**~31 KB free**. The dictionary (`.rodata`, ~56 KB for 276 characters) is the biggest single thing *you*
-added; the arcade added ~6 KB of code across its six games (Tetris, Topo, Flappy, Dino, Memory, Reaction).
+So of the 256 KB: **~217 KB is the flashed image**, **~12 KB** is the emulated-EEPROM slice, leaving
+**~27 KB free**. The dictionary (`.rodata`, ~56 KB for 276 characters) is the biggest single thing *you*
+added; the arcade added ~6 KB of code across its six games (Tetris, Topo, Flappy, Dino, Memory, Reaction),
+and the five custom RGB effects (letters ×2, Spider-Man, crab, palette) another few KB.
 
 ## The memory stack (address map, with KB used)
 
@@ -38,13 +39,13 @@ added; the arcade added ~6 KB of code across its six games (Tetris, Topo, Flappy
 0x0804_0000 ┌───────────────────────────┐   0x2001_0000 ┌───────────────────────────┐
             │ Emulated EEPROM   ~12 KB  │               │ ▼ stack / heap  ~33 KB    │
 0x0803_D000 ├───────────────────────────┤               │   (free working room)     │
-            │ free              ~31 KB  │               │            ·              │
+            │ free              ~27 KB  │               │            ·              │
             │ ← dictionary grows here   │               ├───────────────────────────┤
-0x0802_F200 ├───────────────────────────┤               │ .bss            ~28 KB    │
+0x0802_F200 ├───────────────────────────┤               │ .bss            ~29 KB    │
             │ .data (init vals)  ~3 KB  │               │ RGB frame buf, IME state, │
-            │ .rodata constants ~62 KB  │               │ QMK state (zero-init)     │
+            │ .rodata constants ~63 KB  │               │ QMK state (zero-init)     │
             │   • IME dict ~56 KB       │               ├───────────────────────────┤
-            │ .text  code      ~115 KB  │               │ .data           ~3 KB     │
+            │ .text  code      ~119 KB  │               │ .data           ~3 KB     │
 0x0800_8000 ├───────────────────────────┤   0x2000_0000 └───────────────────────────┘
             │ reserved (offset) ~32 KB  │
 0x0800_0000 │ .vectors          ~0.5 KB │           (bootloader is OUTSIDE this,
@@ -52,23 +53,23 @@ added; the arcade added ~6 KB of code across its six games (Tetris, Topo, Flappy
 ```
 
 **How to read it:**
-- **`.text` (~115 KB)** = compiled program. **`.rodata` (~62 KB)** = read-only constants — the
+- **`.text` (~119 KB)** = compiled program. **`.rodata` (~63 KB)** = read-only constants — the
   276-char IME dictionary (~56 KB), the baked keymap, and the fonts live here. Both are in Flash
   because they must survive power-off.
 - **`.data` / `.bss`** = variables in **RAM**; `.data` (~3 KB) starts from values copied out of Flash
-  at boot, `.bss` (~28 KB) starts zeroed. The **stack** grows down from the top of RAM (~33 KB spare).
+  at boot, `.bss` (~29 KB) starts zeroed. The **stack** grows down from the top of RAM (~33 KB spare).
 - The **emulated EEPROM** (~12 KB) sits at the top of Flash; the **bootloader** is in a *separate*
   ROM that flashing never touches — that's why a bad flash can't brick the board.
 
 ## RAM — plenty of headroom
 
-64 KB of SRAM: ~28 KB `.bss` + ~3 KB `.data` in use, leaving **~33 KB** for stack/heap. The custom
+64 KB of SRAM: ~29 KB `.bss` + ~3 KB `.data` in use, leaving **~32 KB** for stack/heap. The custom
 features cost very little — the IME added only a few hundred bytes (pinyin buffer, candidate list,
 LED stroke-path array). RAM is **not** a constraint here; Flash is.
 
 ## Quick rules of thumb
 
-- Add features/data → spends **Flash**. Watch the ~31 KB free (≈ another ~150 dictionary chars at
+- Add features/data → spends **Flash**. Watch the ~27 KB free (≈ another ~100 dictionary chars at
   ~0.26 KB each).
 - Runtime buffers/variables → spend **RAM** (64 KB, ~33 KB spare).
 - "It remembers X after unplugging" → stored in the **emulated EEPROM** (Flash slice), and only

@@ -1,7 +1,7 @@
 # Flappy (arcade game)
 
 Flappy Bird on the RGB grid. Part of the on-keyboard arcade — open with **Fn + H**, turn the knob to
-select **FLAPPY**, press the knob to start. Code lives in `arcade.c` (the `flappy_*` / `f_*` functions).
+select **FLAPPY**, press the knob to start. Code lives in `src/arcade.c` (the `flappy_*` / `f_*` functions).
 
 ## How it plays
 A **1×1 bird** (gold) sits at a fixed column (**col 2**) while green **pipes** scroll in from the
@@ -40,7 +40,7 @@ A gentle fall (~0.6 s floor-to-floor) that a tap keeps aloft.
 - **Score = pipes passed.** On game-over the board does the arcade **fill sweep**; **20 pipes fills the
   board** (`game_over(f_score, 2)` → `frac = pipes / 20`), colored by tier (bronze / cyan / gold).
 
-## Tuning (in `arcade.c`)
+## Tuning (in `src/arcade.c`)
 - `0.0022f` gravity, `0.13f` terminal cap, `−0.066f` flap impulse (~1-block lift) — the feel.
 - `1600` respawn ms, `0.05f` start speed, `0.000012f` ramp — pacing.
 - Fill target `score / 20` in `game_over`.

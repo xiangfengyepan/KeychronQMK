@@ -9,4 +9,4 @@ DIGITIZER_SHARED_EP = yes
 RGB_MATRIX_CUSTOM_USER = yes
 
 # All custom sources kept in this keymap folder.
-SRC += hanzi_data.c letters.c spider_mask.c arcade.c
+SRC += src/hanzi_data.c src/letters.c src/spider_mask.c src/arcade.c src/crab.c src/palette.c

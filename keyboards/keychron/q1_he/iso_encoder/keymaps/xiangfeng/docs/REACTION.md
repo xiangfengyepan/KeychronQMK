@@ -1,7 +1,7 @@
 # Reaction (arcade game)
 
 A reflex test on the whole board. Part of the on-keyboard arcade — open with **Fn + H**, turn the knob
-to select **REACT**, press the knob to start. Code lives in `arcade.c` (the `react_*` / `rx_*` functions).
+to select **REACT**, press the knob to start. Code lives in `src/arcade.c` (the `react_*` / `rx_*` functions).
 
 ## How it plays
 Three rounds. Each round:
@@ -39,7 +39,7 @@ sliver). Some points: 120 ms → 62, 150 ms → 32, 170 ms → 12. Colored by th
 > 100 ms is essentially the human floor, so 82/82 is meant to be nearly unreachable. Widen the window
 > by lowering the `182` (later zero) in `game_over` case 5.
 
-## Tuning (in `arcade.c`)
+## Tuning (in `src/arcade.c`)
 - `900 + rnd()%2400` in `rx_newround` — the random pre-`GO` wait.
 - `(182 − avg)/82` in `game_over` case 5 — the ms → fill curve (raise `182` to be more forgiving; keep
   the divisor at `82` for exactly 1 key per ms).

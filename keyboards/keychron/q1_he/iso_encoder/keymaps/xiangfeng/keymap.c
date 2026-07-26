@@ -26,6 +26,7 @@
 #include "digitizer.h" // absolute pointer, for the full-screen DVD bounce
 #include "include/hanzi_data.h" // baked pinyin -> stroke-median dictionary (IME)
 #include "include/arcade.h"     // on-keyboard arcade (Fn+H): lobby, Tetris, Topo
+#include "include/palette.h"    // named-color calibration RGB effect (knob = next/prev/reset)
 #include <math.h>
 #include <string.h>
 
@@ -235,9 +236,32 @@ static void draw_begin(const int16_t *x, const int16_t *y, const uint8_t *len, u
 }
 
 // Hold-to-repeat for the RGB adjust keys (step is 1, so a hold ramps smoothly).
-#define RGB_HOLD_INTERVAL 28 // ms between repeats while a key is held
-static uint16_t rgb_hold_kc    = 0;
-static uint16_t rgb_hold_timer = 0;
+#define RGB_HOLD_INTERVAL 28  // ms between repeats once auto-repeat is running
+#define RGB_HOLD_DELAY    350 // ms you must hold before auto-repeat starts (so a tap = exactly 1 step)
+static uint16_t rgb_hold_kc      = 0;
+static uint16_t rgb_hold_timer   = 0;
+static bool     rgb_hold_started = false; // has auto-repeat kicked in yet?
+
+// Palette-effect knob: turn = next/prev swatch, tap = reset, hold = type the live H,S,V.
+#define PAL_KNOB_HOLD_MS 500
+static bool     pal_knob_down    = false;
+static uint16_t pal_knob_timer   = 0;
+static bool     pal_knob_typed   = false; // did this hold already type the value?
+static uint8_t  pal_put_u8(char *s, uint8_t v) { // append v as decimal, return chars written
+    uint8_t n = 0;
+    if (v >= 100) s[n++] = '0' + v / 100;
+    if (v >= 10)  s[n++] = '0' + (v / 10) % 10;
+    s[n++] = '0' + v % 10;
+    return n;
+}
+static void pal_type_hsv(void) { // type "H,S,V" of the live color over USB (no trailing Enter)
+    char b[16]; uint8_t n = 0;
+    n += pal_put_u8(b + n, rgb_matrix_get_hue()); b[n++] = ',';
+    n += pal_put_u8(b + n, rgb_matrix_get_sat()); b[n++] = ',';
+    n += pal_put_u8(b + n, rgb_matrix_get_val());
+    b[n] = 0;
+    send_string(b);
+}
 static void rgb_hold_apply(uint16_t kc) {
     switch (kc) {
         case UG_HUEU: rgb_matrix_increase_hue_noeeprom(); break;
@@ -251,13 +275,22 @@ static void rgb_hold_apply(uint16_t kc) {
     }
 }
 
-// Flash the board red when an RGB setting hits its min/max while adjusting.
-#define LIMIT_FLASH_MS 140  // RGB min/max feedback
-#define LAYER_FLASH_MS 1000 // 1 s red flash when the layer changes
-static bool     limit_flash       = false;
-static uint16_t limit_flash_timer = 0;
-static uint16_t limit_flash_ms    = LIMIT_FLASH_MS; // how long the current flash lasts
-static uint16_t adj_check_kc      = 0;
+// Feedback while adjusting RGB:
+//   - min/max of saturation/brightness/speed -> BLINKS red (not a solid hold)
+//   - hue is cyclic -> board BLANKS once each time it passes through 0
+//     (hue 0 is red, so a red flash there wouldn't be visible)
+//   - default-layer change -> solid 1 s red flash (with the green layer meter)
+#define LAYER_FLASH_MS 1000 // solid red on layer change
+#define BLINK_HALF_MS  110  // min/max blink: red 110 ms on / 110 ms off
+#define LIMIT_FLASH_MS 220  // min/max window = one blink period (a tap still shows one pulse)
+#define HUE_FLASH_MS   140  // single blackout when hue wraps past 0
+enum flash_kind { FLASH_OFF, FLASH_LIMIT, FLASH_LAYER, FLASH_HUE };
+static enum flash_kind flash_mode  = FLASH_OFF;
+static uint16_t        flash_timer = 0;
+static uint16_t        flash_ms    = 0;
+static uint16_t        adj_check_kc = 0;
+static uint8_t         hue_before   = 0; // hue captured before an adjust, to detect a 0-wrap
+static void flash_start(enum flash_kind k, uint16_t ms) { flash_mode = k; flash_timer = timer_read(); flash_ms = ms; }
 static bool rgb_at_limit(uint16_t kc) {
     switch (kc) {
         case UG_SATU: return rgb_matrix_get_sat() >= 255;
@@ -270,7 +303,11 @@ static bool rgb_at_limit(uint16_t kc) {
     }
 }
 static void limit_check(uint16_t kc) {
-    if (rgb_at_limit(kc)) { limit_flash = true; limit_flash_timer = timer_read(); limit_flash_ms = LIMIT_FLASH_MS; }
+    if (rgb_at_limit(kc)) flash_start(FLASH_LIMIT, LIMIT_FLASH_MS);
+}
+static void hue_wrap_check(uint16_t kc, uint8_t before) { // cyclic hue crossed 0 -> one flash
+    uint8_t now = rgb_matrix_get_hue();
+    if ((kc == UG_HUEU && now < before) || (kc == UG_HUED && now > before)) flash_start(FLASH_HUE, HUE_FLASH_MS);
 }
 
 // ---------------- Baked pinyin IME ----------------
@@ -355,7 +392,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, IME_TOGG, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
         { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, ARCADE, 0x0000, 0x0000, LAY_SHOW, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
         { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00CD },
-        { 0x00D4, 0x0000, 0x00D5, 0x0000, 0x0000, 0x0000, 0x00D1, 0x0000, 0x0000, 0x00D2, 0x0000, 0x0000, 0x00CF, 0x00CE, 0x00D0 },
+        { 0x00D4, 0x0000, 0x00D5, 0x0000, 0x0000, 0x0000, MS_STOP, 0x0000, 0x0000, 0x00D2, 0x0000, 0x0000, 0x00CF, 0x00CE, 0x00D0 },
     },
     [2] = {
         { 0x0029, 0x003A, 0x003B, 0x003C, 0x003D, 0x003E, 0x003F, 0x0040, 0x0041, 0x0042, 0x0043, 0x0044, 0x0045, 0x004C, 0x00AE },
@@ -402,6 +439,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (IS_QK_MOMENTARY(keycode)) return true; // let Fn switch layers so Fn+Z can unlock
         return false;                              // swallow every real key
     }
+    if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_PALETTE) { // palette calibration: knob owns colors
+        if (IS_ENCODEREVENT(record->event)) {                  // knob turn -> next / previous swatch
+            if (record->event.pressed) palette_step(record->event.type == ENCODER_CW_EVENT);
+            return false;
+        }
+        if (record->event.key.row == 0 && record->event.key.col == 14) { // knob push (any layer)
+            if (record->event.pressed) { pal_knob_down = true; pal_knob_timer = timer_read(); pal_knob_typed = false; }
+            else { pal_knob_down = false; if (!pal_knob_typed) palette_reset(); } // tap = reset (hold already typed)
+            return false;
+        }
+    }
     if (ime_on) { // compose mode: intercept typing, cycling and confirm
         // F-row (matrix row 0, cols 1..12 = F1..F12) = jump to that candidate. Matched by POSITION,
         // because on Mac base the top row sends media keys, not KC_F1. Navigates (doesn't confirm).
@@ -430,9 +478,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     letters_process_record(keycode, record);
     // Longer red flash when the default layer changes.
     if (record->event.pressed && keycode >= QK_DEF_LAYER && keycode <= QK_DEF_LAYER_MAX) {
-        limit_flash       = true;
-        limit_flash_timer = timer_read();
-        limit_flash_ms    = LAYER_FLASH_MS;
+        flash_start(FLASH_LAYER, LAYER_FLASH_MS);
     }
     switch (keycode) {
         case MS_ACC4: // layer 1, F3: 1.0x -> speed level index 4 (mkspd_3)
@@ -459,7 +505,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) set_locked(true);
             return false;
         case LAY_SHOW: // Win Fn (layer 3) L: flash the layer meter WITHOUT changing the layer
-            if (record->event.pressed) { limit_flash = true; limit_flash_timer = timer_read(); limit_flash_ms = LAYER_FLASH_MS; }
+            if (record->event.pressed) flash_start(FLASH_LAYER, LAYER_FLASH_MS);
             return false;
         case ARCADE: // Fn + H: open the on-keyboard arcade (knob-hold to exit)
             if (record->event.pressed) arcade_open(timer_read32());
@@ -488,9 +534,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
         case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:
             if (record->event.pressed) {
-                rgb_hold_kc    = keycode; // begin auto-repeat while held
-                rgb_hold_timer = timer_read();
-                adj_check_kc   = keycode; // check min/max after the step applies
+                hue_before       = rgb_matrix_get_hue(); // remember, to spot a 0-wrap after the tap
+                rgb_hold_kc      = keycode; // arm auto-repeat while held
+                rgb_hold_timer   = timer_read();
+                rgb_hold_started = false;    // wait RGB_HOLD_DELAY before the first repeat
+                adj_check_kc     = keycode;  // check min/max after the step applies
             } else {
                 if (rgb_hold_kc == keycode) rgb_hold_kc = 0;
                 // persist whatever value the hold reached
@@ -504,14 +552,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 void housekeeping_task_user(void) {
     if (arcade_active()) { arcade_tick(); return; } // arcade runs alone
-    if (rgb_hold_kc && timer_elapsed(rgb_hold_timer) > RGB_HOLD_INTERVAL) {
+    if (rgb_hold_kc && timer_elapsed(rgb_hold_timer) > (rgb_hold_started ? RGB_HOLD_INTERVAL : RGB_HOLD_DELAY)) {
+        uint8_t h0 = rgb_matrix_get_hue();
         rgb_hold_apply(rgb_hold_kc);
-        rgb_hold_timer = timer_read();
-        limit_check(rgb_hold_kc); // held at a boundary keeps the flash lit
+        rgb_hold_timer   = timer_read();
+        rgb_hold_started = true;      // now repeat fast
+        limit_check(rgb_hold_kc);     // pinned at a boundary re-arms the blink window
+        hue_wrap_check(rgb_hold_kc, h0); // one flash each time a held hue passes 0
     }
     if (adj_check_kc) { // one-shot check after a tap (value already applied)
         limit_check(adj_check_kc);
+        hue_wrap_check(adj_check_kc, hue_before);
         adj_check_kc = 0;
+    }
+    if (pal_knob_down && !pal_knob_typed && timer_elapsed(pal_knob_timer) > PAL_KNOB_HOLD_MS) {
+        pal_type_hsv();      // knob held long enough -> type the live H,S,V once
+        pal_knob_typed = true;
     }
 
     if (dvd_on && timer_elapsed(dvd_timer) > SHP_INTERVAL) { // full-screen bounce
@@ -603,10 +659,14 @@ void housekeeping_task_user(void) {
     }
 }
 
+// snap an indicator color to a palette constant rendered at brightness v (max-channel)
+static RGB pal_rgb(HSV c, uint8_t v) { c.v = v; return hsv_to_rgb(c); }
+
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (arcade_active()) { arcade_render(led_min, led_max); return false; } // arcade owns the board
-    if (keys_locked) { // block/lock mode -> dim amber wash so it's obvious
-        for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 70, 34, 0);
+    if (keys_locked) { // block/lock mode -> dim wash so it's obvious (COL_GOLD, dim)
+        RGB c = pal_rgb((HSV)COL_GOLD, 70);
+        for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, c.r, c.g, c.b);
         return false;
     }
     if (ime_on) { // draw the candidate stroke-by-stroke over the whole board
@@ -616,37 +676,51 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
                 ime_led_timer = timer_read();
                 if (++ime_led_pos > ime_led_n + 6) ime_led_pos = 0; // loop with a short pause
             }
-            for (uint16_t i = 0; i < ime_led_n && i <= ime_led_pos; i++) rgb_matrix_set_color(ime_leds[i], 0, 170, 120);
-            if (ime_led_pos < ime_led_n) rgb_matrix_set_color(ime_leds[ime_led_pos], 120, 255, 180); // bright head
-        } else { // IME on, no match yet -> faint blue "listening" glow
-            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 0, 6, 12);
+            RGB trail = pal_rgb((HSV)COL_CYAN, 170), head = pal_rgb((HSV)COL_GREEN_LIGHT, 255);
+            for (uint16_t i = 0; i < ime_led_n && i <= ime_led_pos; i++) rgb_matrix_set_color(ime_leds[i], trail.r, trail.g, trail.b);
+            if (ime_led_pos < ime_led_n) rgb_matrix_set_color(ime_leds[ime_led_pos], head.r, head.g, head.b); // bright head
+        } else { // IME on, no match yet -> faint "listening" glow (COL_SKY, very dim)
+            RGB c = pal_rgb((HSV)COL_SKY, 12);
+            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, c.r, c.g, c.b);
         }
         // number row = pinyin buffer length: 1 letter -> key '1', 2 -> '1'+'2', … (green); dark when empty
+        RGB buf = pal_rgb((HSV)COL_GREEN, 210);
         for (uint8_t j = 1; j <= py_len && j <= 10; j++) {
             uint8_t led = g_led_config.matrix_co[1][j]; // number row: col 1='1' … col 9='9', col 10='0'
-            if (led != NO_LED) rgb_matrix_set_color(led, 0, 210, 50);
+            if (led != NO_LED) rgb_matrix_set_color(led, buf.r, buf.g, buf.b);
         }
         // F1..F12 = candidate list; press a key to jump to it, the selected one is highlighted
+        RGB sel = pal_rgb((HSV)COL_PINK, 255), avail = pal_rgb((HSV)COL_CYAN, 200);
         for (uint8_t j = 0; j < cand_n && j < 12; j++) {
             uint8_t led = g_led_config.matrix_co[0][1 + j]; // F1=(0,1) … F12=(0,12)
             if (led == NO_LED) continue;
-            if (j == cand_i) rgb_matrix_set_color(led, 255, 30, 170); // selected candidate: magenta
-            else             rgb_matrix_set_color(led, 0, 170, 200);  // available candidate: cyan
+            if (j == cand_i) rgb_matrix_set_color(led, sel.r, sel.g, sel.b);   // selected candidate (COL_PINK)
+            else             rgb_matrix_set_color(led, avail.r, avail.g, avail.b); // available candidate (COL_CYAN)
         }
         return false;
     }
-    if (limit_flash) {
-        if (timer_elapsed(limit_flash_timer) < limit_flash_ms) {
-            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 255, 0, 0); // whole board red
-            if (limit_flash_ms == LAYER_FLASH_MS) { // layer change: green layer meter on top, ONLY during the 1 s flash
-                uint8_t cur = get_highest_layer(layer_state | default_layer_state);
-                for (uint8_t i = 0; i <= cur && i < 4; i++) {
-                    uint8_t led = g_led_config.matrix_co[0][1 + i]; // F1..F4 = matrix (0,1)..(0,4)
-                    if (led != NO_LED) rgb_matrix_set_color(led, 0, 220, 0);
+    if (flash_mode != FLASH_OFF) {
+        if (timer_elapsed(flash_timer) < flash_ms) {
+            // min/max blinks (free-running clock, so it toggles even while re-armed on hold);
+            // layer flash stays solid red; hue-wrap BLANKS the board (hue 0 is red, so a red
+            // flash would be invisible — blacking out is what reads).
+            bool on = (flash_mode != FLASH_LIMIT) || (timer_read() % (2 * BLINK_HALF_MS)) < BLINK_HALF_MS;
+            if (on) {
+                RGB fl = pal_rgb((HSV)COL_RED, 255); // min/max + layer flash color
+                uint8_t fr = fl.r, fg = fl.g, fb = fl.b;
+                if (flash_mode == FLASH_HUE) { fr = fg = fb = 0; } // hue 0 = red -> blank instead
+                for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, fr, fg, fb); // whole board
+                if (flash_mode == FLASH_LAYER) { // layer change: green layer meter on top, ONLY during the 1 s flash
+                    RGB lm = pal_rgb((HSV)COL_GREEN, 220);
+                    uint8_t cur = get_highest_layer(layer_state | default_layer_state);
+                    for (uint8_t i = 0; i <= cur && i < 4; i++) {
+                        uint8_t led = g_led_config.matrix_co[0][1 + i]; // F1..F4 = matrix (0,1)..(0,4)
+                        if (led != NO_LED) rgb_matrix_set_color(led, lm.r, lm.g, lm.b);
+                    }
                 }
             }
         } else {
-            limit_flash = false; // flash done -> back to the normal RGB effect (no persistent green)
+            flash_mode = FLASH_OFF; // flash done -> back to the normal RGB effect
         }
     }
     return true;

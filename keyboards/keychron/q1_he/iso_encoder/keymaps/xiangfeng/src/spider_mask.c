@@ -26,6 +26,7 @@
 
 #include "quantum.h"
 #include "rgb_matrix.h"
+#include "include/palette.h" // named color constants (COL_RED mask / COL_WHITE eyes)
 #include <math.h>
 #include <lib/lib8tion/lib8tion.h>
 
@@ -64,6 +65,9 @@ static void sm_build(void) {
     float rangex = (maxx > minx) ? (float)(maxx - minx) : 1.0f;
     float rangey = (maxy > miny) ? (float)(maxy - miny) : 1.0f;
 
+    RGB red = hsv_to_rgb((HSV)COL_RED);   // mask color
+    RGB wht = hsv_to_rgb((HSV)COL_WHITE); // eye color
+
     for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         float x  = (g_led_config.point[i].x - minx) / rangex * SM_UW;
         float y  = (g_led_config.point[i].y - miny) / rangey * SM_UH;
@@ -71,16 +75,14 @@ static void sm_build(void) {
         float dR = sm_eye_d2(x, y, SM_UW - SM_LCX, -SM_EA);
         float de = dL < dR ? dL : dR;
 
-        if (de < 1.0f) { // white eye (slight inner shading)
-            float sh   = 0.78f + 0.22f * (1.0f - de);
+        if (de < 1.0f) { // COL_WHITE eye (slight inner shading only)
+            float sh   = 0.82f + 0.18f * (1.0f - de);
             sm_type[i] = 2;
-            sm_r[i]    = (uint8_t)(228 * sh);
-            sm_g[i]    = (uint8_t)(238 * sh);
-            sm_b[i]    = (uint8_t)(255 * sh);
-        } else if (de < 1.5f) { // black eye outline
+            sm_r[i] = (uint8_t)(wht.r * sh); sm_g[i] = (uint8_t)(wht.g * sh); sm_b[i] = (uint8_t)(wht.b * sh);
+        } else if (de < 1.5f) { // dark outline framing the eye
             sm_type[i] = 1;
-            sm_r[i] = 6; sm_g[i] = 4; sm_b[i] = 8;
-        } else { // red mask + faint web strands
+            sm_r[i] = 10; sm_g[i] = 0; sm_b[i] = 0;
+        } else { // COL_RED mask + faint darker web strands
             float ang  = atan2f(y - 2.6f, x - SM_UW * 0.5f);
             float sp   = powf(fabsf(cosf(ang * 3.5f)), 18);
             float dist = sqrtf((x - SM_UW * 0.5f) * (x - SM_UW * 0.5f) + (y - 2.6f) * (y - 2.6f));
@@ -89,9 +91,10 @@ static void sm_build(void) {
             if (w > 1.0f) w = 1.0f;
             w *= 0.55f;
             sm_type[i] = 0;
-            sm_r[i]    = (uint8_t)(205 * (1 - w) + 64 * w);
-            sm_g[i]    = (uint8_t)(22 * (1 - w) + 6 * w);
-            sm_b[i]    = (uint8_t)(28 * (1 - w) + 10 * w);
+            float k    = (1.0f - w) + (55.0f / 255.0f) * w; // web strands darken toward ~55/255
+            sm_r[i]    = (uint8_t)(red.r * k);
+            sm_g[i]    = (uint8_t)(red.g * k);
+            sm_b[i]    = (uint8_t)(red.b * k);
         }
     }
     sm_ready = true;
@@ -115,7 +118,7 @@ bool spider_mask(effect_params_t *params) {
             g = scale8(g, br);
             b = scale8(b, br);
         } else if (sm_type[i] == 2 && blink) { // eyes shut -> dim red
-            r = 90; g = 10; b = 14;
+            r = 90; g = 0; b = 0;
         }
 
         // quick white web-burst from recent key presses

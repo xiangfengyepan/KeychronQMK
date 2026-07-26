@@ -1,7 +1,7 @@
 # Topo (arcade game)
 
 Whack-a-mole on the whole keyboard. Part of the on-keyboard arcade — open with **Fn + H**, turn the
-knob to select **TOPO**, press the knob to start. Code lives in `arcade.c` (the `topo_*` functions).
+knob to select **TOPO**, press the knob to start. Code lives in `src/arcade.c` (the `topo_*` functions).
 
 ## How it plays
 A key lights up (a "mole"). **Press that key** before it fades. Each hit scores 1. It's **sudden
@@ -44,7 +44,7 @@ death, surviving means keeping an increasingly crowded board clear.
   exponential** so the last keys are brutal: `frac = 1 − e^(−hits / 32)` (`game_over(topo_score, 1)`),
   colored by tier (bronze / cyan / gold). Full board ≈ 130+ hits.
 
-## Tuning (in `arcade.c`)
+## Tuning (in `src/arcade.c`)
 - `MOLE_LIFE` (3000) — the per-mole window.
 - `230 + 1170·expf(-hits/25)` in `topo_tick` — the spawn ramp (lower `/25` = harsher).
 - `1 + topo_score/10`, cap `TOPO_MAX` (8) — max simultaneous moles.
