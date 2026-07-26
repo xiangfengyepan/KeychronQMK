@@ -24,8 +24,8 @@
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
 #include "digitizer.h" // absolute pointer, for the full-screen DVD bounce
-#include "hanzi_data.h" // baked pinyin -> stroke-median dictionary (IME)
-#include "arcade.h"     // on-keyboard arcade (Fn+H): lobby, Tetris, Topo
+#include "include/hanzi_data.h" // baked pinyin -> stroke-median dictionary (IME)
+#include "include/arcade.h"     // on-keyboard arcade (Fn+H): lobby, Tetris, Topo
 #include <math.h>
 #include <string.h>
 

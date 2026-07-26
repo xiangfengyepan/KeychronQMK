@@ -2,7 +2,7 @@
  * Rendered on the RGB matrix; opened with Fn+H (see keymap.c). Self-contained. */
 #include "quantum.h"
 #include "rgb_matrix.h"
-#include "arcade.h"
+#include "include/arcade.h"
 #include <string.h>
 #include <math.h>
 
