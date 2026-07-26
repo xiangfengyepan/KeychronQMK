@@ -145,7 +145,7 @@ games:
 | `MS_ACC5` | layer 1 · F4 | mouse speed 2.0× |
 | `MS_SH1`…`MS_SH0` | layer 1 · 1–0 | shape movers: ∞ / circle / triangle / square / hexagon / star / heart / spirograph / spiral / lissajous |
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
-| `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 209-char baked dictionary (`hanzi_data.c`). |
+| `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 276-char baked dictionary — 12 common chars per pinyin initial (`hanzi_data.c`). |
 | `MS_STOP` | layer 3 · Space | stop any running mouse animation (shape mover / DVD bounce / IME draw); releases the button if mid-stroke |
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores the prior speed on release |
 | `BLK_TOGG` | layer 3 · Z | block/lock mode — swallow all keys; Fn+Z again exits; dim amber wash; **persists across power-off** |
@@ -158,7 +158,7 @@ Everything lives in **`keymaps/xiangfeng/`**:
 - `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce, RGB hold-repeat + min/max & layer flash, the pinyin IME, `MS_STOP`, block/lock mode, arcade hooks
 - `config.h` — timeouts, RGB steps, mouse speeds, HE-profile defines, default effect
 - `rules.mk` — VIA + digitizer + custom **USER** RGB effects + `SRC` list
-- `hanzi_data.c` / `.h` — the 209-char pinyin → stroke-median dictionary
+- `hanzi_data.c` / `.h` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
 - `arcade.c` / `.h` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, score)
 - `letters.c`, `spider_mask.c` — custom RGB effects; `rgb_matrix_user.inc` registers them
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references

@@ -36,13 +36,15 @@ Everything is in this folder — `keymap.c` (logic) + `hanzi_data.c/.h` (diction
 
 ## 2. The dictionary — `hanzi_data.c` / `hanzi_data.h`
 
-- **209 characters**, curated: your names first (`feng`→沣, `pan`→潘, `ye`→叶, `xiang`→祥 are the
+- **276 characters** — the 12 most-common per usable pinyin initial (23 letters, no i/u/v). Your names
+  come first for their syllable (`feng`→沣, `pan`→潘, `ye`→叶, `xiang`→祥 are the
   first candidate for their pinyin), plus common homophones and a broad common set.
 - Each entry is real **stroke-median** data from **Make Me a Hanzi** (`skishore/makemeahanzi`), in
-  canonical stroke order, mapped into the drawing grid (x → right, y → down), centred on its own
-  origin and scaled to ~110 units tall. So every character starts from the same centre point.
-- Pinyin is **toneless** (`hǎo` → `hao`; `ü` → `u`), taken from Make Me a Hanzi's `dictionary.txt`.
-- Cost: ~41 KB of flash (the dictionary is by far the biggest custom item — see `MEMORY.md`).
+  canonical stroke order, mapped into the drawing grid (x → right, y → down), mapped with a fixed em-box transform (`x=S·(mx−512)`, `y=S·(388−my)`, `S≈0.125`) so all characters
+  share one centre and scale — no resampling; the raw medians are used as-is.
+- Pinyin is **toneless** (`hǎo` → `hao`; `ü` → `v`); the pinyin **and the character frequency** (used to
+  keep each letter's most-common characters) come from **hanziDB** — see Sources below.
+- Cost: ~56 KB of flash (the dictionary is by far the biggest custom item — see `MEMORY.md`).
 
 ```c
 typedef struct {
@@ -53,15 +55,29 @@ typedef struct {
     const char *py;        // toneless pinyin, e.g. "feng"
 } hanzi_t;
 extern const hanzi_t hanzi_table[];   // ordered; name chars first
-extern const uint16_t hanzi_count;    // 209
+extern const uint16_t hanzi_count;    // 276
 ```
 
-### Adding / changing characters
-Regenerate `hanzi_data.c`: for each character, pull its `medians` from
-`hanzi-writer-data` (`https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/<char>.json`) and its
-pinyin from Make Me a Hanzi's `dictionary.txt`, flip Y, centre + scale to ~110, and emit the arrays
-+ a `hanzi_table[]` row. Keep the name characters early so they stay the first candidate. Budget:
-~0.26 KB per character; ~55 KB of flash headroom (≈ another ~200 characters).
+### Sources (open data, fetched from GitHub raw)
+
+| Data | What it provides | GitHub |
+|---|---|---|
+| **Make Me a Hanzi** — `graphics.txt` | per-character **stroke medians** (the drawing) | <https://github.com/skishore/makemeahanzi><br>raw: `https://raw.githubusercontent.com/skishore/makemeahanzi/master/graphics.txt` |
+| **hanziDB** — `data/hanziDB.csv` | **frequency rank** + **pinyin** (which characters, and their order) | <https://github.com/ruddfawcett/hanziDB.csv><br>raw: `https://raw.githubusercontent.com/ruddfawcett/hanziDB.csv/master/data/hanziDB.csv` |
+
+### Regenerating `hanzi_data.c`
+For each usable pinyin initial (all letters **except i / u / v**, which have no syllables), take the
+**12 most-common characters** (by hanziDB `frequency_rank`) whose toneless pinyin starts with that
+letter and that have medians — forcing the name characters (沣/潘/叶/祥) first so they stay candidate 1.
+Transform every median point with the fixed em-box map
+
+```
+x = round(S · (mx − 512)),   y = round(S · (388 − my)),   S ≈ 0.125
+```
+
+(fit against the existing name characters; Y is flipped, and the **raw medians are used as-is — no
+resampling**). Emit the `x[]/y[]/l[]` arrays + a `hanzi_table[]` row, and set `hanzi_count`. Budget:
+~0.2 KB per character; ~31 KB of flash headroom (≈ another ~150 characters).
 
 ---
 
@@ -70,7 +86,7 @@ pinyin from Make Me a Hanzi's `dictionary.txt`, flip Y, centre + scale to ~110, 
 ### State
 ```c
 #define PY_MAX 7            // longest pinyin buffer
-#define IME_CAND_MAX 48     // candidate list cap
+#define IME_CAND_MAX 12     // candidate list cap = the F-row (F1..F12)
 #define IME_LED_MAX 220     // LED path cap
 static bool     ime_on;                 // compose mode active
 static char     py_buf[PY_MAX+1]; static uint8_t py_len;

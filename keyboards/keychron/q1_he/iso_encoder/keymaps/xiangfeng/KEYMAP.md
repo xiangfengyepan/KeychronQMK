@@ -80,10 +80,13 @@ a faint blue glow means IME is on but no match yet. Two on-key meters help you c
 mouse (same engine as F10) — so **have a paint app focused**. IME stays on after a confirm so you can
 type the next character; Esc or Fn+I leaves.
 
-- **Dictionary:** 209 baked characters (`hanzi_data.c`), real stroke medians from Make Me a Hanzi.
+- **Dictionary:** 276 baked characters (`hanzi_data.c`) — the 12 most-common characters for each of the
+  23 usable pinyin initials (all letters except i/u/v). Built from two open datasets: **stroke medians**
+  from Make Me a Hanzi (<https://github.com/skishore/makemeahanzi>) and **frequency + pinyin** from
+  hanziDB (<https://github.com/ruddfawcett/hanziDB.csv>). Full regeneration steps in [IME.md](IME.md).
 - Your names are the **first candidate** for their pinyin: `feng`→沣, `pan`→潘, `ye`→叶, `xiang`→祥.
 - ⚠️ **Low-res preview:** the LED grid is ~87 keys, so a complex character is a rough trace, not crisp
-  — you'll rely partly on knowing the cycle order. Coverage is a curated ~200 common characters, not a
+  — you'll rely partly on knowing the cycle order. Coverage is the 276 most-common characters (12 per pinyin initial), not a
   full IME. To add/adjust characters, regenerate `hanzi_data.c`.
 
 ## RGB adjust keys (on layer 1)

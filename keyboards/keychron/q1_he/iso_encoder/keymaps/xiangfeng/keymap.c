@@ -279,7 +279,7 @@ static void limit_check(uint16_t kc) {
 // draw the character with the mouse; Backspace deletes a letter; Esc cancels.
 // The current candidate is animated stroke-by-stroke across the RGB LEDs.
 #define PY_MAX 7
-#define IME_CAND_MAX 48
+#define IME_CAND_MAX 12   // cap candidates to the F-row (F1..F12)
 #define IME_LED_MAX 220
 #define IME_LED_SCALE 0.46f // glyph units -> LED grid
 static bool     ime_on = false;
