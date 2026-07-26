@@ -96,6 +96,18 @@ See [LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md) for the full effect list and orde
 **layer 3 · Backspace** (`LT_CLEAR`) — wipes the buffer for the Letters Marquee / Big-letter effects.
 Nothing clears automatically.
 
+## Layer-change indicator
+When the **default layer** changes (Fn + Esc → `DF()`), the whole board flashes **red for 1 s**, and
+**during that second F1–F4 light green** as a layer meter — the count of green keys = the new layer:
+Mac base = F1, Mac Fn = F1–F2, Win base = F1–F3, Win Fn = F1–F4. Both clear after the second (the
+green is **not** persistent). **Fn + L** (`LAY_SHOW`) fires the same flash any time to *peek* the
+layer without switching — tap and release Fn to read your base (Mac = 1 key, Win = 3). Separate from the short 140 ms **red** flash used for RGB min/max limits.
+
+## Block / lock mode — Fn + Z
+**layer 3 · Z** (`BLK_TOGG`) toggles a mode where **every keypress is swallowed** — nothing reaches the
+PC (handy for wiping the board down). **Fn still works**, so **Fn + Z** again exits. While locked the
+board shows a **dim amber wash** so the state is obvious.
+
 ## Custom keycodes
 | Keycode | Location | Action |
 |---|---|---|
@@ -115,6 +127,8 @@ Nothing clears automatically.
 | `IME_TOGG` | layer 1 · I / layer 3 · I | toggle the pinyin IME (Fn+I) |
 | `MS_STOP` | layer 3 · Space | stop any running mouse animation (shape / DVD bounce / IME draw) |
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores your speed on release |
+| `BLK_TOGG` | layer 3 · Z | block/lock mode on/off — swallow all keys (nothing reaches the PC); **persists across power-off** |
+| `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s red flash + green F1–F4) **without** changing the layer |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 Custom keycodes show as **"Unknown"** in VIA — don't remap those keys there or you lose the feature.

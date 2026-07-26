@@ -41,7 +41,16 @@ enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DVD,
                        MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0,
                        IME_TOGG, // pinyin IME on/off (Fn+I)
                        MS_STOP,  // stop any running mouse animation (Win Fn + Space)
-                       MS_BOOST }; // hold to boost mouse speed to F4/1.0x (Win Fn + LShift)
+                       MS_BOOST, // hold to boost mouse speed to F4/1.0x (Win Fn + LShift)
+                       BLK_TOGG, // block/lock mode on/off (Win Fn + Z) — swallow all keys
+                       LAY_SHOW }; // flash the layer meter without changing layer (Win Fn + L)
+
+static bool keys_locked = false; // block mode: keypresses don't reach the PC
+
+// Persist block/lock mode in EEPROM so it survives a power cycle.
+static void set_locked(bool v) { keys_locked = v; eeconfig_update_user((uint32_t)(v ? 1 : 0)); }
+void eeconfig_init_user(void)      { eeconfig_update_user(0); }              // default: unlocked
+void keyboard_post_init_user(void) { keys_locked = eeconfig_read_user() & 1u; } // restore on boot
 
 // Auto mouse-shape mover. One shape per number key (layer 1 · 1..0):
 //   tap = start that shape, tap the same key again = stop.
@@ -241,9 +250,11 @@ static void rgb_hold_apply(uint16_t kc) {
 }
 
 // Flash the board red when an RGB setting hits its min/max while adjusting.
-#define LIMIT_FLASH_MS 140
+#define LIMIT_FLASH_MS 140  // RGB min/max feedback
+#define LAYER_FLASH_MS 1000 // 1 s red flash when the layer changes
 static bool     limit_flash       = false;
 static uint16_t limit_flash_timer = 0;
+static uint16_t limit_flash_ms    = LIMIT_FLASH_MS; // how long the current flash lasts
 static uint16_t adj_check_kc      = 0;
 static bool rgb_at_limit(uint16_t kc) {
     switch (kc) {
@@ -257,7 +268,7 @@ static bool rgb_at_limit(uint16_t kc) {
     }
 }
 static void limit_check(uint16_t kc) {
-    if (rgb_at_limit(kc)) { limit_flash = true; limit_flash_timer = timer_read(); }
+    if (rgb_at_limit(kc)) { limit_flash = true; limit_flash_timer = timer_read(); limit_flash_ms = LIMIT_FLASH_MS; }
 }
 
 // ---------------- Baked pinyin IME ----------------
@@ -340,7 +351,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x5242, 0x00DD, 0x00DF, MS_ACC4, MS_ACC5, 0x0000, 0x0000, 0x0000, 0x0000, MS_DVD, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D3 },
         { 0x5242, MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5, MS_SH6, MS_SH7, MS_SH8, MS_SH9, MS_SH0, 0x0000, 0x0000, 0x0000, 0x00D9 },
         { 0x0000, 0x0000, 0x00CD, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, IME_TOGG, 0x0000, 0x0000, 0x0000, 0x0000, 0x00D1, 0x00DA },
-        { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
+        { 0x0000, 0x00CF, 0x00CE, 0x00D0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, LAY_SHOW, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
         { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x00CD },
         { 0x00D4, 0x0000, 0x00D5, 0x0000, 0x0000, 0x0000, 0x00D1, 0x0000, 0x0000, 0x00D2, 0x0000, 0x0000, 0x00CF, 0x00CE, 0x00D0 },
     },
@@ -356,8 +367,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x5241, 0x00BE, 0x00BD, 0x7E06, 0x7E07, 0x7828, 0x7827, 0x00AC, 0x00AE, 0x00AB, 0x00A8, 0x00AA, 0x00A9, 0x0046, 0x00D3 },
         { 0x0001, 0x7E0B, 0x7E0C, 0x7E0D, 0x7E0E, 0x7700, 0x7701, 0x7702, 0x7703, 0x7704, 0x7705, 0x7706, 0x7707, LT_CLEAR, 0x0049 },
         { 0x7820, 0x7821, 0x7827, 0x7823, 0x7825, 0x7829, 0x0001, 0x0001, IME_TOGG, 0x0001, 0x0001, 0x0001, 0x0001, 0x00D1, 0x0001 },
-        { 0x0001, 0x7822, 0x7828, 0x7824, 0x7826, 0x782A, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x004D, 0x0000 },
-        { MS_BOOST, 0x0001, 0x7E10, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
+        { 0x0001, 0x7822, 0x7828, 0x7824, 0x7826, 0x782A, 0x0001, 0x0001, 0x0001, LAY_SHOW, 0x0001, 0x0001, 0x0001, 0x004D, 0x0000 },
+        { MS_BOOST, 0x0001, BLK_TOGG, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
         { 0x00D4, 0x0001, 0x00D5, 0x0000, 0x0000, 0x0000, MS_STOP, 0x0000, 0x0000, 0x00D2, 0x0001, 0x0001, 0x00CF, 0x00CE, 0x00D0 },
     },
 };
@@ -373,6 +384,11 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 #endif // ENCODER_MAP_ENABLE
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (keys_locked) { // block/lock mode: nothing reaches the PC (e.g. to clean the board)
+        if (keycode == BLK_TOGG) { if (record->event.pressed) set_locked(false); return false; }
+        if (IS_QK_MOMENTARY(keycode)) return true; // let Fn switch layers so Fn+Z can unlock
+        return false;                              // swallow every real key
+    }
     if (ime_on) { // compose mode: intercept typing, cycling and confirm
         switch (keycode) {
             case IME_TOGG: break; // toggle-off handled in the main switch below
@@ -396,10 +412,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
     }
     letters_process_record(keycode, record);
-    // Red flash (same as the RGB min/max feedback) when the default layer changes.
+    // Longer red flash when the default layer changes.
     if (record->event.pressed && keycode >= QK_DEF_LAYER && keycode <= QK_DEF_LAYER_MAX) {
         limit_flash       = true;
         limit_flash_timer = timer_read();
+        limit_flash_ms    = LAYER_FLASH_MS;
     }
     switch (keycode) {
         case MS_ACC4: // layer 1, F3: 1.0x -> speed level index 4 (mkspd_3)
@@ -422,6 +439,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case MS_SH9: if (record->event.pressed) shp_toggle(SHP_SPIRAL); return false; // 9  spiral
         case MS_SH0: if (record->event.pressed) shp_toggle(SHP_LISS);   return false; // 0  lissajous
         case MS_DVD:  if (record->event.pressed) dvd_toggle();  return false; // F9: full-screen DVD bounce
+        case BLK_TOGG: // Win Fn (layer 3) Z: enter block/lock mode (Fn+Z again exits); persists across power-off
+            if (record->event.pressed) set_locked(true);
+            return false;
+        case LAY_SHOW: // Win Fn (layer 3) L: flash the layer meter WITHOUT changing the layer
+            if (record->event.pressed) { limit_flash = true; limit_flash_timer = timer_read(); limit_flash_ms = LAYER_FLASH_MS; }
+            return false;
         case MS_STOP: // Win Fn (layer 3) Space: stop any running mouse animation (shape / DVD / draw)
             if (record->event.pressed) {
                 shp_active = SHP_OFF;
@@ -561,6 +584,10 @@ void housekeeping_task_user(void) {
 }
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    if (keys_locked) { // block/lock mode -> dim amber wash so it's obvious
+        for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 70, 34, 0);
+        return false;
+    }
     if (ime_on) { // draw the candidate stroke-by-stroke over the whole board
         for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 0, 0, 0);
         if (cand_n) {
@@ -576,10 +603,17 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         return false;
     }
     if (limit_flash) {
-        if (timer_elapsed(limit_flash_timer) < LIMIT_FLASH_MS) {
-            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 255, 0, 0);
+        if (timer_elapsed(limit_flash_timer) < limit_flash_ms) {
+            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 255, 0, 0); // whole board red
+            if (limit_flash_ms == LAYER_FLASH_MS) { // layer change: green layer meter on top, ONLY during the 1 s flash
+                uint8_t cur = get_highest_layer(layer_state | default_layer_state);
+                for (uint8_t i = 0; i <= cur && i < 4; i++) {
+                    uint8_t led = g_led_config.matrix_co[0][1 + i]; // F1..F4 = matrix (0,1)..(0,4)
+                    if (led != NO_LED) rgb_matrix_set_color(led, 0, 220, 0);
+                }
+            }
         } else {
-            limit_flash = false;
+            limit_flash = false; // flash done -> back to the normal RGB effect (no persistent green)
         }
     }
     return true;

@@ -71,7 +71,8 @@ F1 / F2 are QMK's built-in `KC_MS_ACCEL0` / `KC_MS_ACCEL2`; F3 / F4 are custom k
 ## 4. RGB adjust — fine step + hold-to-repeat
 - **Step = 1** for Hue / Saturation / Brightness / Speed (finest control). Defined in this folder's `config.h`.
 - **Hold to repeat:** holding an adjust key ramps continuously (~28 ms/step) and saves on release. Tap = 1 nudge, hold = sweep. (`process_record_user` + `housekeeping_task_user` in `keymap.c`.)
-- **Min/max feedback:** the board flashes **red** when **saturation / brightness / speed** reaches its limit. Hue wraps around, so it has no min/max and never flashes. (`rgb_matrix_indicators_advanced_user` in `keymap.c`.)
+- **Min/max feedback:** the board flashes **red** (~140 ms) when **saturation / brightness / speed** reaches its limit. Hue wraps around, so it has no min/max and never flashes. (`rgb_matrix_indicators_advanced_user` in `keymap.c`.)
+- **Layer-change indicator:** changing the default layer (Fn+Esc) flashes the board **red for 1 s**, and during that second **F1–F4 glow green** as a meter of the new layer (1–4 keys = layer 0–3). Both clear after 1 s — no persistent light.
 
 | Setting | Keys (layer 1) | Range | Step | Default |
 |---------|---------|-------|------|---------|
@@ -105,7 +106,7 @@ In this folder's `config.h` (seconds):
 This folder's **`usevia-definition.json`** adds **Letters Marquee (25)**, **Letters Big (26)** and **Spider-Man (27)** to the lighting Effect dropdown. (The keyboard's own `via_json` is back to stock, so use this copy.)
 
 - The **Keychron Launcher has no Design tab** — load this definition in **[usevia.app](https://usevia.app)** → Settings → *Show Design tab* → Design → drop the JSON.
-- Custom keycodes (`MS_ACC4/5`, `MS_SH*`, `MS_DVD`, `IME_TOGG`, `MS_STOP`, `MS_BOOST`, `LT_CLEAR`) show as **Unknown** in VIA — don't remap those keys or you'll lose the feature.
+- Custom keycodes (`MS_ACC4/5`, `MS_SH*`, `MS_DVD`, `IME_TOGG`, `MS_STOP`, `MS_BOOST`, `BLK_TOGG`, `LAY_SHOW`, `LT_CLEAR`) show as **Unknown** in VIA — don't remap those keys or you'll lose the feature.
 
 ---
 
@@ -119,11 +120,13 @@ This folder's **`usevia-definition.json`** adds **Letters Marquee (25)**, **Lett
 | `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 209-char baked dictionary (`hanzi_data.c`). |
 | `MS_STOP` | layer 3 · Space | stop any running mouse animation (shape mover / DVD bounce / IME draw); releases the button if mid-stroke |
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores the prior speed on release |
+| `BLK_TOGG` | layer 3 · Z | block/lock mode — swallow all keys; Fn+Z again exits; dim amber wash; **persists across power-off** |
+| `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s flash + green F1–F4) without changing the layer |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 ## Files
 Everything lives in **`keymaps/xiangfeng/`**:
-- `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce, RGB hold-repeat + min/max flash, the pinyin IME, `MS_STOP`
+- `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce, RGB hold-repeat + min/max & layer flash, the pinyin IME, `MS_STOP`, block/lock mode
 - `config.h` — timeouts, RGB steps, mouse speeds, HE-profile defines, default effect
 - `rules.mk` — VIA + digitizer + custom **USER** RGB effects + `SRC` list
 - `hanzi_data.c` / `.h` — the 209-char pinyin → stroke-median dictionary
