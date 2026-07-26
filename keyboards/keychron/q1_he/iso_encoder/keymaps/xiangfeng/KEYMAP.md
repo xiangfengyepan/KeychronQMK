@@ -64,13 +64,19 @@ method**. While it's on, the keyboard is in *compose mode*:
 |---|---|
 | letters | type toneless pinyin (e.g. `feng`) — candidates load as you type (prefix match) |
 | **← / →** (or **Tab**) | previous / next candidate |
-| **1–9** | jump straight to candidate N |
+| **F1–F12** | jump to that candidate — the F-row is a live candidate strip (see below) |
 | **Space / Enter** | confirm — draws the current character with the mouse |
 | **Backspace** | delete the last pinyin letter |
 | **Esc** / **Fn + I** | exit IME |
 
 The current candidate is **animated stroke-by-stroke across the RGB LEDs** (green trail, bright head);
-a faint blue glow means IME is on but no match yet. On **confirm**, the character is drawn with the
+a faint blue glow means IME is on but no match yet. Two on-key meters help you compose:
+- **Number row = pinyin buffer length** — 1 letter lights `1`, 2 letters light `1`+`2`, … in green
+  (up to `1–0` = 10), dark when the buffer is empty.
+- **F-row = candidate strip** — the matched candidates light **F1…F12** (cyan), and the **currently
+  selected** one is **magenta**. Press an **F-key to jump to that candidate** (updates the preview);
+  Space/Enter still confirms. Matched by key *position*, so it works even though the Mac top row sends
+  media keys. On **confirm**, the character is drawn with the
 mouse (same engine as F10) — so **have a paint app focused**. IME stays on after a confirm so you can
 type the next character; Esc or Fn+I leaves.
 

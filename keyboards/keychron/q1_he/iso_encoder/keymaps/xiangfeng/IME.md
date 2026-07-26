@@ -10,7 +10,9 @@ Everything is in this folder — `keymap.c` (logic) + `hanzi_data.c/.h` (diction
 
 1. **Fn + I** (`IME_TOGG`) turns the IME on — the board enters *compose mode*.
 2. Type a toneless **pinyin** syllable (e.g. `feng`). Candidates load live as you type (prefix match).
-3. The **current candidate is animated stroke-by-stroke across the LEDs** so you can recognise it.
+3. The **current candidate is animated stroke-by-stroke across the LEDs** so you can recognise it, and
+   the **number row shows how many pinyin letters you've typed** — 1 letter → key `1`, 2 → `1`+`2`, …
+   (green; dark when the buffer is empty).
 4. Cycle / pick the one you want, then **confirm** — the cursor **draws it** (have a paint app focused).
 5. The IME stays on and the drawing **carriage advances right**, so you can write a whole sentence.
 6. **Esc** or **Fn + I** exits.
@@ -21,10 +23,11 @@ Everything is in this folder — `keymap.c` (logic) + `hanzi_data.c/.h` (diction
 |---|---|
 | letters (A–Z) | append to the pinyin buffer (max 7) → refresh candidates |
 | **← / →** or **Tab** | previous / next candidate |
-| **1 – 9** | jump straight to candidate N and confirm |
+| **F1 – F12** | jump to that candidate (the F-row is a live candidate strip; selected = magenta) |
 | **Space / Enter** | confirm the current candidate → draw it |
 | **Backspace** | delete the last pinyin letter |
 | **Esc** / **Fn + I** | exit the IME |
+| **1 – 0** | *(no action — they're the buffer-length meter; presses are swallowed)* |
 | modifiers / Fn | pass through (so Fn+I can toggle off) |
 
 `IME_TOGG` lives on **layer 1 · I** (Mac Fn) and **layer 3 · I** (Win Fn), so it works in either OS mode.
@@ -77,8 +80,10 @@ static uint8_t  ime_leds[IME_LED_MAX]; static uint16_t ime_led_n, ime_led_pos, i
 
 ### Input — `process_record_user()`
 When `ime_on`, a `switch` at the **top of the function** intercepts keys *before* normal handling:
-letters build `py_buf` and call `ime_update()`; arrows/Tab move `cand_i`; digits confirm candidate N;
-Space/Enter call `ime_confirm()`; Backspace trims a letter; Esc exits. Anything else (`break`) falls
+letters build `py_buf` and call `ime_update()`; arrows/Tab move `cand_i`; the **F-row (matched by
+position, row 0 cols 1–12) sets `cand_i`** and reloads the preview; **digits `1–0` are swallowed** (the
+number row is just a length meter now); Space/Enter call `ime_confirm()`; Backspace trims a letter; Esc
+exits. Anything else (`break`) falls
 through so modifiers and Fn still work. `IME_TOGG` in the main switch flips `ime_on` and resets state.
 
 ### Candidate lookup — `ime_update()`
@@ -97,7 +102,10 @@ Then it calls `ime_led_load()` to build the preview for `cand[cand_i]`.
   centred at 112,32). Consecutive duplicates are dropped. This runs once per candidate change.
 - The indicator callback (when `ime_on`) clears the board, then **reveals the path progressively**
   (`ime_led_pos` advances ~every 55 ms and loops): a green trail with a bright green head. No match
-  yet → a faint blue "listening" glow. It `return false`s to hide the normal effect + kb indicators.
+  yet → a faint blue "listening" glow. On top, the **number row lights `1…min(py_len,10)` green**
+  (`matrix_co[1][1..10]` = keys `1`–`9`,`0`) as a pinyin-buffer-length meter — dark when `py_len == 0`.
+  The **F-row lights the candidate strip** (`matrix_co[0][1..12]` = F1–F12): available candidates cyan,
+  the selected `cand_i` magenta. It `return false`s to hide the normal effect + kb indicators.
 - ⚠️ The LED grid is only ~87 keys, so a complex character is a rough trace, not crisp — you rely
   partly on cycle order.
 

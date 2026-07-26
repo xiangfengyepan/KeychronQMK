@@ -403,6 +403,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         return false;                              // swallow every real key
     }
     if (ime_on) { // compose mode: intercept typing, cycling and confirm
+        // F-row (matrix row 0, cols 1..12 = F1..F12) = jump to that candidate. Matched by POSITION,
+        // because on Mac base the top row sends media keys, not KC_F1. Navigates (doesn't confirm).
+        if (record->event.key.row == 0 && record->event.key.col >= 1 && record->event.key.col <= 12) {
+            if (record->event.pressed) { uint8_t k = record->event.key.col - 1; if (k < cand_n) { cand_i = k; ime_led_load(); } }
+            return false;
+        }
         switch (keycode) {
             case IME_TOGG: break; // toggle-off handled in the main switch below
             case KC_ESC:  if (record->event.pressed) { ime_on = false; ime_reset(); } return false; // exit IME
@@ -413,10 +419,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             case KC_RGHT: if (record->event.pressed && cand_n) { cand_i = (cand_i + 1) % cand_n; ime_led_load(); } return false;         // next
             case KC_LEFT: if (record->event.pressed && cand_n) { cand_i = (cand_i + cand_n - 1) % cand_n; ime_led_load(); } return false; // previous
             default:
-                if (keycode >= KC_1 && keycode <= KC_9) { // pick candidate N directly
-                    if (record->event.pressed) { uint8_t k = keycode - KC_1; if (k < cand_n) { cand_i = k; ime_confirm(); } }
-                    return false;
-                }
+                if (keycode >= KC_1 && keycode <= KC_0) return false; // number row is the length meter now — swallow; candidates are picked on the F-row
                 if (keycode >= KC_A && keycode <= KC_Z) { // build the pinyin buffer
                     if (record->event.pressed && py_len < PY_MAX) { py_buf[py_len++] = 'a' + (keycode - KC_A); py_buf[py_len] = 0; ime_update(); }
                     return false;
@@ -617,6 +620,18 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             if (ime_led_pos < ime_led_n) rgb_matrix_set_color(ime_leds[ime_led_pos], 120, 255, 180); // bright head
         } else { // IME on, no match yet -> faint blue "listening" glow
             for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 0, 6, 12);
+        }
+        // number row = pinyin buffer length: 1 letter -> key '1', 2 -> '1'+'2', … (green); dark when empty
+        for (uint8_t j = 1; j <= py_len && j <= 10; j++) {
+            uint8_t led = g_led_config.matrix_co[1][j]; // number row: col 1='1' … col 9='9', col 10='0'
+            if (led != NO_LED) rgb_matrix_set_color(led, 0, 210, 50);
+        }
+        // F1..F12 = candidate list; press a key to jump to it, the selected one is highlighted
+        for (uint8_t j = 0; j < cand_n && j < 12; j++) {
+            uint8_t led = g_led_config.matrix_co[0][1 + j]; // F1=(0,1) … F12=(0,12)
+            if (led == NO_LED) continue;
+            if (j == cand_i) rgb_matrix_set_color(led, 255, 30, 170); // selected candidate: magenta
+            else             rgb_matrix_set_color(led, 0, 170, 200);  // available candidate: cyan
         }
         return false;
     }
