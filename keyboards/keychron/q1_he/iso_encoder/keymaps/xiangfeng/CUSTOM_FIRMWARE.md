@@ -124,7 +124,8 @@ duck** (Dino), press the **lit key** (Topo), **repeat the flashed keys** (Memory
 (Reaction).
 
 Flow: **lobby** (game name animates letter-by-letter, a 5×5 LED font) → **3× red countdown** → game →
-**score fill** (lights the board top-left → down; bronze / cyan / gold by score; max 82 keys). Six
+**score fill** (lights the board top-left → down; bronze / cyan / gold by score; max 82 keys) → knob-tap
+or **10 s idle** returns to the lobby. Six
 games:
 
 | Game | One-liner | Doc |

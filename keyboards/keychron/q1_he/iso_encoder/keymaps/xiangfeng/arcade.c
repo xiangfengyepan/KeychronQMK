@@ -457,6 +457,7 @@ void arcade_tick(void) {
         case A_DINO:   dino_tick();   break;
         case A_MEMORY: memory_tick(); break;
         case A_REACT:  react_tick();  break;
+        case A_SCORE:  if (timer_elapsed32(sc_t) >= 10000) enter_lobby(); break; // idle 10s -> lobby
         default: break;
     }
 }
