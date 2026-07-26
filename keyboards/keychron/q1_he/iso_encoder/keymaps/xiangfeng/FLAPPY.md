@@ -11,11 +11,12 @@ The bird **hovers in place until your first flap** (classic Flappy), so you get 
 flap gives an upward nudge; gravity pulls it back down.
 
 - **Ceiling** — bonks harmlessly (the bird just can't go above row 0).
-- **Floor / pipe** — game over.
+- **Floor / pipe** — game over. The floor is the **space row**: the bird can dip all the way to the
+  **ZXCV row (row 4)** and survive; it only dies once it falls past row 5 (`f_bt > 5`).
 
-## Field — 5 tall × scrolling
-- **Height = 5**: matrix **rows 0–4** (top = row 0). The bird's height `f_bt` is a float in `[0, 4]`,
-  rounded to the lit row.
+## Field — scrolling
+- **Rows**: pipes fill matrix **rows 0–4** (top = row 0); the bird's height `f_bt` is a float rounded to
+  the lit row and may drop to **row 5** (space row) before the floor kills it.
 - **Scroll**: pipes spawn off-screen at logical col 14 and move left; only cols **0–13** are drawn.
 - Collision is purely logical (at col 2), so the missing key at (row 4, col 11) never matters.
 

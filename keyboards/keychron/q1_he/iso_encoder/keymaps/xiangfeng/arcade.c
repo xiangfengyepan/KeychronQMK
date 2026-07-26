@@ -268,7 +268,7 @@ static void flappy_tick(void) {
     if (!f_started) return;
     f_vy += 0.0022f * s; if (f_vy > 0.13f) f_vy = 0.13f; f_bt += f_vy * s;
     if (f_bt < 0) { f_bt = 0; f_vy = 0; }                       // bonk the ceiling, don't die
-    if (f_bt > 4) { game_over(f_score, 2); return; }            // hit the floor
+    if (f_bt > 5) { game_over(f_score, 2); return; }            // hit the floor (space row); ZXCV row survivable
     f_speed += 0.000012f * dt; f_spawn -= (int32_t)dt;
     if (f_spawn <= 0 && f_np < 6) { f_pipe[f_np].col = 14; f_pipe[f_np].gap = rnd() % 3; f_pipe[f_np].passed = false; f_np++; f_spawn = 1600; }
     for (uint8_t i = 0; i < f_np; i++) f_pipe[i].col -= f_speed * s;
@@ -283,7 +283,7 @@ static void flappy_render(void) {
         int8_t c = iround(f_pipe[i].col); if (c < 0 || c > 13) continue;
         for (uint8_t r = 0; r < 5; r++) if (r < f_pipe[i].gap || r > f_pipe[i].gap + 2) px(r, c, 40, 190, 60);
     }
-    int8_t br = iround(f_bt); if (br < 0) br = 0; if (br > 4) br = 4;
+    int8_t br = iround(f_bt); if (br < 0) br = 0; if (br > 5) br = 5;
     px(br, FB_COL, 255, 220, 40);
 }
 
