@@ -261,7 +261,7 @@ static void flappy_start(void) {
     f_bt = 1.5f; f_vy = 0; f_np = 0; f_score = 0; f_speed = 0.05f; f_spawn = 1400;
     f_started = false; phys_last = timer_read32(); st = A_FLAPPY;
 }
-static void flappy_flap(void) { f_started = true; f_vy = -0.095f; }
+static void flappy_flap(void) { f_started = true; f_vy = -0.066f; } // ~1-block lift
 static void flappy_tick(void) {
     uint32_t now = timer_read32(); float dt = (float)(now - phys_last); phys_last = now;
     float s = dt / 16.67f;

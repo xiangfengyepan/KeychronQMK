@@ -28,7 +28,7 @@ flap gives an upward nudge; gravity pulls it back down.
 
 ## Physics (ported 1:1 from the prototype)
 Frame-rate independent — each tick scales by real elapsed time `s = dt / 16.67`:
-- gravity `f_vy += 0.0022·s`, terminal-capped at `0.13`; flap sets `f_vy = −0.095`.
+- gravity `f_vy += 0.0022·s`, terminal-capped at `0.13`; flap sets `f_vy = −0.066` (a **~1-block** lift).
 - pipe speed starts `0.05` col/frame and creeps up (`+0.000012·dt`); a new pipe every **1600 ms** with
   a random gap position (`rnd()%3`, so gap spans rows `gap … gap+2`).
 
@@ -40,7 +40,7 @@ A gentle fall (~0.6 s floor-to-floor) that a tap keeps aloft.
   board** (`game_over(f_score, 2)` → `frac = pipes / 20`), colored by tier (bronze / cyan / gold).
 
 ## Tuning (in `arcade.c`)
-- `0.0022f` gravity, `0.13f` terminal cap, `−0.095f` flap impulse — the feel.
+- `0.0022f` gravity, `0.13f` terminal cap, `−0.066f` flap impulse (~1-block lift) — the feel.
 - `1600` respawn ms, `0.05f` start speed, `0.000012f` ramp — pacing.
 - Fill target `score / 20` in `game_over`.
 
