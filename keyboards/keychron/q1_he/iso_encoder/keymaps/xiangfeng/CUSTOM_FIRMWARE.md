@@ -20,6 +20,7 @@ Flash the `.bin` with **QMK Toolbox** on Windows (DFU: switch to *Cable*, hold t
 ## Documentation
 - **[KEYMAP.md](KEYMAP.md)** — layers, custom keys, mouse speed / shape movers, RGB adjust keys, the pinyin IME, and the custom-keycode table.
 - **[IME.md](IME.md)** — the Fn+I pinyin input method: how it works end-to-end, the dictionary, and the code path.
+- **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** — the two on-keyboard arcade games (Fn+H).
 - **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–27).
 - **[MEMORY.md](MEMORY.md)** — flash / RAM / EEPROM storage map and the firmware size breakdown.
 
@@ -106,7 +107,22 @@ In this folder's `config.h` (seconds):
 This folder's **`usevia-definition.json`** adds **Letters Marquee (25)**, **Letters Big (26)** and **Spider-Man (27)** to the lighting Effect dropdown. (The keyboard's own `via_json` is back to stock, so use this copy.)
 
 - The **Keychron Launcher has no Design tab** — load this definition in **[usevia.app](https://usevia.app)** → Settings → *Show Design tab* → Design → drop the JSON.
-- Custom keycodes (`MS_ACC4/5`, `MS_SH*`, `MS_DVD`, `IME_TOGG`, `MS_STOP`, `MS_BOOST`, `BLK_TOGG`, `LAY_SHOW`, `LT_CLEAR`) show as **Unknown** in VIA — don't remap those keys or you'll lose the feature.
+- Custom keycodes (`MS_ACC4/5`, `MS_SH*`, `MS_DVD`, `IME_TOGG`, `MS_STOP`, `MS_BOOST`, `BLK_TOGG`, `LAY_SHOW`, `ARCADE`, `LT_CLEAR`) show as **Unknown** in VIA — don't remap those keys or you'll lose the feature.
+
+## 8. On-keyboard arcade — Fn + H
+A tiny arcade rendered on the RGB grid (`arcade.c`). **Fn + H** opens the **lobby**; while it's open
+the arcade owns the whole board and **swallows all keys**. The **knob is the dial**:
+
+| Knob | Action |
+|---|---|
+| **turn** | browse games (lobby) / rotate the piece CW·CCW (Tetris) |
+| **tap** | start the selected game / return to lobby from the score screen |
+| **hold ~0.5 s** | quit a game → lobby; hold in the lobby → **exit the arcade** |
+
+Flow: **lobby** (game name animates letter-by-letter, a 5×5 LED font) → **3× red countdown** → game →
+**score fill** (lights the board top-left → down; bronze / cyan / gold by score; max 82 keys). Two
+games: **[TETRIS.md](TETRIS.md)** (5×13 well, PgUp/PgDn move, Home hard-drops) and **[TOPO.md](TOPO.md)**
+(whack-a-mole, sudden death, exponential spawn ramp).
 
 ---
 
@@ -122,17 +138,19 @@ This folder's **`usevia-definition.json`** adds **Letters Marquee (25)**, **Lett
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores the prior speed on release |
 | `BLK_TOGG` | layer 3 · Z | block/lock mode — swallow all keys; Fn+Z again exits; dim amber wash; **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s flash + green F1–F4) without changing the layer |
+| `ARCADE` | layer 1/3 · H | open the on-keyboard arcade (lobby → Tetris / Topo); knob-hold to exit |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 ## Files
 Everything lives in **`keymaps/xiangfeng/`**:
-- `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce, RGB hold-repeat + min/max & layer flash, the pinyin IME, `MS_STOP`, block/lock mode
+- `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce, RGB hold-repeat + min/max & layer flash, the pinyin IME, `MS_STOP`, block/lock mode, arcade hooks
 - `config.h` — timeouts, RGB steps, mouse speeds, HE-profile defines, default effect
 - `rules.mk` — VIA + digitizer + custom **USER** RGB effects + `SRC` list
 - `hanzi_data.c` / `.h` — the 209-char pinyin → stroke-median dictionary
+- `arcade.c` / `.h` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, score)
 - `letters.c`, `spider_mask.c` — custom RGB effects; `rgb_matrix_user.inc` registers them
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references
-- docs: this file, `KEYMAP.md`, `IME.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
+- docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
 
 Two shared files keep **small in-place patches** (they can't live in a keymap folder):
 - `quantum/mousekey.c` — 3 → 5 speed levels + `mousekey_set_accel_level()` / `mousekey_get_offset()` / `mousekey_get_accel_level()`

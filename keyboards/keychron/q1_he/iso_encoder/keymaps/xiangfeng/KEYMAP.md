@@ -108,6 +108,12 @@ layer without switching — tap and release Fn to read your base (Mac = 1 key, W
 PC (handy for wiping the board down). **Fn still works**, so **Fn + Z** again exits. While locked the
 board shows a **dim amber wash** so the state is obvious.
 
+## Arcade — Fn + H
+**layer 1 · H / layer 3 · H** (`ARCADE`) opens a tiny arcade on the RGB grid. While open it **owns the
+whole board and swallows all keys**; the **knob** is the control (turn = browse/rotate, tap = start,
+**hold ~0.5 s = quit / exit**). Games: **Tetris** and **Topo** — full write-ups in
+[TETRIS.md](TETRIS.md) and [TOPO.md](TOPO.md).
+
 ## Custom keycodes
 | Keycode | Location | Action |
 |---|---|---|
@@ -129,6 +135,7 @@ board shows a **dim amber wash** so the state is obvious.
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores your speed on release |
 | `BLK_TOGG` | layer 3 · Z | block/lock mode on/off — swallow all keys (nothing reaches the PC); **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s red flash + green F1–F4) **without** changing the layer |
+| `ARCADE` | layer 1 · H / layer 3 · H | open the on-keyboard arcade (lobby → Tetris / Topo) |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 Custom keycodes show as **"Unknown"** in VIA — don't remap those keys there or you lose the feature.
