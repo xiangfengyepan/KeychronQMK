@@ -58,7 +58,7 @@ static uint8_t         hue_before   = 0; // hue captured before an adjust, to de
 // on the number row (key '1' = MSB (bit7) … key '8' = LSB (bit0)), color-coded per setting.
 #define BIN_SHOW_MS 2000                 // keep it lit this long after the last adjust
 static uint16_t bin_kc    = 0;           // which UG_* setting is being shown (0 = none)
-static uint16_t bin_timer = 0;
+static uint32_t bin_timer = 0;           // 32-bit: a uint16_t wraps every ~65s and revives the readout on its own
 static void flash_start(enum flash_kind k, uint16_t ms) { flash_mode = k; flash_timer = timer_read(); flash_ms = ms; }
 static bool rgb_at_limit(uint16_t kc) {
     switch (kc) {
@@ -88,7 +88,7 @@ void rgbfx_adjust_press(uint16_t keycode) {
     rgb_hold_timer   = timer_read();
     rgb_hold_started = false;    // wait RGB_HOLD_DELAY before the first repeat
     adj_check_kc     = keycode;  // check min/max after the step applies
-    bin_kc = keycode; bin_timer = timer_read(); // show this setting's value in binary
+    bin_kc = keycode; bin_timer = timer_read32(); // show this setting's value in binary (any UG_* key: Fn+W/S or the top-row ☼-/☼+)
 }
 
 void rgbfx_adjust_release(uint16_t keycode) {
@@ -111,7 +111,7 @@ void rgbfx_task(void) {
         rgb_hold_started = true;      // now repeat fast
         limit_check(rgb_hold_kc);     // pinned at a boundary re-arms the blink window
         hue_wrap_check(rgb_hold_kc, h0); // one flash each time a held hue passes 0
-        bin_timer = timer_read();     // keep the binary readout alive while holding
+        bin_timer = timer_read32(); // keep the binary readout alive while holding
     }
     if (adj_check_kc) { // one-shot check after a tap (value already applied)
         limit_check(adj_check_kc);
@@ -151,7 +151,7 @@ void rgbfx_render(uint8_t led_min, uint8_t led_max) {
     }
     // Binary readout of the setting you're adjusting, on the number row.
     // Key '1' = bit 7 (MSB) … key '8' = bit 0 (LSB); lit bit = setting color, clear bit = dim.
-    if (bin_kc && timer_elapsed(bin_timer) < BIN_SHOW_MS) {
+    if (bin_kc && timer_elapsed32(bin_timer) < BIN_SHOW_MS) {
         uint8_t v = 0, cr = 0, cg = 0, cb = 0;
         switch (bin_kc) {
             case UG_HUEU: case UG_HUED: v = rgb_matrix_get_hue();   cr = 0;   cg = 200; cb = 0;   break; // Hue   → green
