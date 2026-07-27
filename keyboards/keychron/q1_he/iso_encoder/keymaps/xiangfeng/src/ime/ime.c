@@ -13,8 +13,10 @@
 #include "quantum.h"
 #include "rgb_matrix.h"
 #include "include/ime.h"
+#include "include/mouse.h"      // mouse character-drawing engine (draw_begin + carriage)
 #include "include/hanzi_data.h" // baked pinyin -> stroke-median dictionary
 #include "include/palette.h"    // named-color HSV constants (COL_*)
+#include "include/utils.h"      // pal_rgb()
 #include <math.h>
 #include <string.h>
 
@@ -33,9 +35,6 @@ static uint16_t cand[IME_CAND_MAX];
 static uint8_t  cand_n = 0, cand_i = 0;
 static uint8_t  ime_leds[IME_LED_MAX];
 static uint16_t ime_led_n = 0, ime_led_pos = 0, ime_led_timer = 0;
-
-// snap an indicator color to a palette constant rendered at brightness v (max-channel)
-static RGB pal_rgb(HSV c, uint8_t v) { c.v = v; return hsv_to_rgb(c); }
 
 static uint8_t nearest_led(float lx, float ly) {
     uint8_t best = 0; float bd = 1e9f;

@@ -162,7 +162,7 @@ games:
 
 ## Files
 Everything lives in **`keymaps/xiangfeng/`**. The custom C sources sit in a **`src/`** subfolder and the headers in **`include/`** (only `keymap.c` and `rgb_matrix_user.inc` must stay in the keymap root):
-- `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce + the shared mouse-drawing engine, RGB hold-repeat + min/max & layer flash, thin pinyin-IME call-outs, `MS_STOP`, block/lock mode, arcade hooks
+- `keymap.c` — thin glue: baked keymap tables, the `custom_keycodes` enum, block/lock mode, and the three QMK entry points that dispatch into the feature modules (mouse / rgbfx / IME / arcade)
 - `config.h` — timeouts, RGB steps, mouse speeds, HE-profile defines, default effect
 - `rules.mk` — VIA + digitizer + custom **USER** RGB effects + `SRC` list (points at `src/*.c`)
 - `rgb_matrix_user.inc` — registers the custom USER RGB effects
@@ -171,7 +171,10 @@ Everything lives in **`keymaps/xiangfeng/`**. The custom C sources sit in a **`s
   - `src/ime/hanzi_data.c` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
   - `src/arcade.c` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, Drop-Merge, Pong, score)
   - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c`, `src/heatmap.c`, `src/audio.c` — custom RGB effects (`src/audio.c` also overrides the `kc_custom_hid_rx` hook to receive the audio companion app's Raw HID stream)
-- **`include/`** — headers: `palette.h` (15 named `COL_*` color constants, the single source of color for the effects/indicators/game palettes), `arcade.h`, `ime.h` (pinyin-IME public API), `hanzi_data.h`, `tetris.h`
+  - `src/mouse/mouse.c` — the mouse-animation engine (behind `include/mouse.h`): shape movers, the full-screen DVD bounce, and the "draw with the mouse" glyph tracer (also driven by the IME via `draw_begin` + the shared `carriage_x`/`draw_cx`/`draw_cy`)
+  - `src/rgbfx/rgbfx.c` — RGB-adjust feedback (behind `include/rgbfx.h`): min/max & hue-wrap & layer flashes, hold-to-repeat on the adjust keys, the binary value readout, and the Palette knob-hold "type the H,S,V" gesture
+  - `src/utils/utils.c` — generic helpers (behind `include/utils.h`): `pal_rgb()` (HSV→RGB at a brightness) and `pal_put_u8()` (uint8→decimal), shared by rgbfx and the IME
+- **`include/`** — headers: `palette.h` (15 named `COL_*` color constants, the single source of color for the effects/indicators/game palettes), `arcade.h`, `ime.h` (pinyin-IME public API), `mouse.h` (mouse-animation engine API), `rgbfx.h` (RGB-adjust feedback API), `utils.h` (shared helpers), `hanzi_data.h`, `tetris.h`
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references
 - docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `FLAPPY.md`, `DINO.md`, `MEMORY_GAME.md`, `REACTION.md`, `DROP.md`, `PONG.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
 

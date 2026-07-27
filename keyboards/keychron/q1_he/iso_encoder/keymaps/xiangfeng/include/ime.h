@@ -16,10 +16,5 @@ void ime_toggle(void);                                        // Fn+I: flip IME 
 bool ime_process_record(uint16_t keycode, keyrecord_t *record); // compose-mode key handling; true = consumed
 void ime_render(uint8_t led_min, uint8_t led_max);            // candidate animation + length meter + F-row strip
 
-/* ---- mouse character-drawing engine (defined in keymap.c, shared with the
- *      mouse shape / "draw my name" features). ime_confirm() traces a glyph with
- *      it; the toggle rewinds the carriage. Kept in keymap.c on purpose. ---- */
-void draw_begin(const int16_t *x, const int16_t *y, const uint8_t *len, uint8_t ns);
-extern float carriage_x; // x-origin for the next drawn character
-extern float draw_cx;    // continuous virtual pen position (x)
-extern float draw_cy;    // continuous virtual pen position (y)
+/* The mouse character-drawing engine ime_confirm() traces glyphs with (draw_begin
+ * + carriage_x / draw_cx / draw_cy) lives in src/mouse — see include/mouse.h. */

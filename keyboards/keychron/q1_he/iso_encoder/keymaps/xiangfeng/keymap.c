@@ -19,16 +19,21 @@
  * (Keymap-Q1 HE ISO Knob-24-20-59.json). Keycodes are written as their raw
  * 16-bit QMK values straight into the matrix, so this is an exact copy of the
  * configured layout (layers + encoder), independent of EEPROM.
+ *
+ * This file is thin glue: the layout tables, the custom_keycodes enum, the
+ * block/lock mode, and the three QMK entry points that dispatch into the
+ * feature modules — the mouse-animation engine (src/mouse), the RGB-adjust
+ * feedback (src/rgbfx), the pinyin IME (src/ime) and the arcade (src/arcade).
  */
 
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
-#include "digitizer.h" // absolute pointer, for the full-screen DVD bounce
-#include "include/ime.h"        // baked pinyin IME (compose mode, Fn+I) — logic in src/ime/ime.c
-#include "include/arcade.h"     // on-keyboard arcade (Fn+H): lobby, Tetris, Topo
-#include "include/palette.h"    // named-color calibration RGB effect (knob = next/prev/reset)
-#include <math.h>
-#include <string.h>
+#include "include/ime.h"     // baked pinyin IME (compose mode, Fn+I) — logic in src/ime/ime.c
+#include "include/arcade.h"  // on-keyboard arcade (Fn+H): lobby, Tetris, Topo
+#include "include/palette.h" // named-color calibration RGB effect (knob = next/prev/reset)
+#include "include/mouse.h"   // mouse-animation engine (shapes / DVD bounce / draw) — src/mouse
+#include "include/rgbfx.h"   // RGB-adjust feedback + palette-knob helpers — src/rgbfx
+#include "include/utils.h"   // pal_rgb() for the lock-mode wash
 
 // Capture typed keys for the LETTERS_MARQUEE / LETTERS_BIG RGB effects.
 extern void letters_process_record(uint16_t keycode, keyrecord_t *record);
@@ -36,7 +41,6 @@ extern void letters_clear(void); // wipe the marquee / letter buffer
 
 // Extra persistent mouse-speed levels (beyond built-in ACCEL0/1/2).
 extern void    mousekey_set_accel_level(uint8_t level);
-extern uint8_t mousekey_get_offset(void);
 extern uint8_t mousekey_get_accel_level(void);
 enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DVD,
                        MS_SH1, MS_SH2, MS_SH3, MS_SH4, MS_SH5,
@@ -54,271 +58,6 @@ static bool keys_locked = false; // block mode: keypresses don't reach the PC
 static void set_locked(bool v) { keys_locked = v; eeconfig_update_user((uint32_t)(v ? 1 : 0)); }
 void eeconfig_init_user(void)      { eeconfig_update_user(0); }              // default: unlocked
 void keyboard_post_init_user(void) { keys_locked = eeconfig_read_user() & 1u; } // restore on boot
-
-// Auto mouse-shape mover. One shape per number key (layer 1 · 1..0):
-//   tap = start that shape, tap the same key again = stop.
-// Fixed size; traversal speed follows the mouse-accel level (F1..F5).
-//   1 ∞infinity  2 circle  3 triangle  4 square  5 hexagon
-//   6 star       7 heart   8 spirograph 9 spiral 0 lissajous
-// Separately, layer 1 · F9 = full-screen DVD bounce (absolute, see dvd_*).
-enum { SHP_OFF = 0, SHP_INF, SHP_INFH, SHP_WAVE, SHP_SPIRAL,
-       SHP_CIRCLE, SHP_TRI, SHP_SQUARE, SHP_PENTA, SHP_HEX,
-       SHP_STAR, SHP_HEART, SHP_ROSE, SHP_LISS, SHP_SPIRO };
-#define SHP_INTERVAL 12 // ms per step
-static uint8_t  shp_active = SHP_OFF;
-static uint16_t shp_timer  = 0;
-static float    shp_theta  = 0;
-static float    shp_ax = 0, shp_ay = 0; // fractional movement accumulators
-static bool     draw_on = false;        // "draw my name" (祥沣) active
-
-// Full-screen DVD bounce (layer 1 · F9). Uses the absolute digitizer report:
-// x/y are screen fractions [0,1], so it bounces off the REAL screen edges at any
-// resolution (the firmware can't read the pixel size, but 0..1 spans the screen).
-static bool     dvd_on = false;
-static uint16_t dvd_timer = 0;
-static float    dvd_px = 0.10f, dvd_py = 0.10f;   // position, screen fraction
-static float    dvd_vx = 0.0060f, dvd_vy = 0.0043f; // velocity per tick
-
-static void shp_poly_v(uint8_t n, float r, uint8_t k, float *vx, float *vy) {
-    float a = -1.5708f + (6.28318f / n) * k; // top vertex at start (0,0), centre (0,r)
-    *vx = r * cosf(a);
-    *vy = r + r * sinf(a);
-}
-
-static void shp_pos(uint8_t s, float th, float *ox, float *oy) {
-    if (s == SHP_INF) { // vertical figure-8
-        *ox = 30.0f * sinf(2.0f * th);
-        *oy = 95.0f * sinf(th);
-        return;
-    }
-    if (s == SHP_INFH) { // horizontal infinity
-        *ox = 95.0f * sinf(th);
-        *oy = 30.0f * sinf(2.0f * th);
-        return;
-    }
-    if (s == SHP_CIRCLE) { // circle looping downward from start
-        *ox = 55.0f * sinf(th);
-        *oy = 55.0f * (1.0f - cosf(th));
-        return;
-    }
-    if (s == SHP_WAVE) {
-        *ox = 90.0f * sinf(th);
-        *oy = 45.0f * sinf(4.0f * th);
-        return;
-    }
-    if (s == SHP_SPIRAL) { // grows outward over one loop
-        float r = 60.0f * th / 6.28318f;
-        float a = 3.0f * th;
-        *ox = r * cosf(a);
-        *oy = r * sinf(a);
-        return;
-    }
-    if (s == SHP_STAR) { // 5-point star (10 alternating vertices)
-        float   seg = th / (6.28318f / 10);
-        uint8_t k   = (uint8_t)seg;
-        float   f   = seg - (float)k;
-        float   a0 = -1.5708f + 0.628318f * k, a1 = -1.5708f + 0.628318f * (k + 1);
-        float   r0 = (k & 1) ? 28.0f : 70.0f, r1 = ((k + 1) & 1) ? 28.0f : 70.0f;
-        float   x0 = r0 * cosf(a0), y0 = r0 * sinf(a0), x1 = r1 * cosf(a1), y1 = r1 * sinf(a1);
-        *ox = x0 + (x1 - x0) * f;
-        *oy = y0 + (y1 - y0) * f;
-        return;
-    }
-    if (s == SHP_HEART) {
-        float sx = sinf(th);
-        *ox = 5.0f * (16.0f * sx * sx * sx);
-        *oy = -5.0f * (13.0f * cosf(th) - 5.0f * cosf(2 * th) - 2.0f * cosf(3 * th) - cosf(4 * th));
-        return;
-    }
-    if (s == SHP_ROSE) { // 4-petal rose
-        float r = 60.0f * cosf(2.0f * th);
-        *ox = r * cosf(th);
-        *oy = r * sinf(th);
-        return;
-    }
-    if (s == SHP_LISS) {
-        *ox = 80.0f * sinf(3.0f * th);
-        *oy = 80.0f * sinf(2.0f * th);
-        return;
-    }
-    if (s == SHP_SPIRO) {
-        *ox = 42.0f * cosf(th) + 25.0f * cosf(7.0f * th);
-        *oy = 42.0f * sinf(th) - 25.0f * sinf(7.0f * th);
-        return;
-    }
-    if (s == SHP_SQUARE) { // axis-aligned square, corner at start
-        const float S = 95.0f;
-        const float X[4] = {0, S, S, 0}, Y[4] = {0, 0, S, S};
-        float       seg = th / (6.28318f / 4);
-        uint8_t     k   = (uint8_t)seg;
-        float       f   = seg - (float)k;
-        *ox = X[k & 3] + (X[(k + 1) & 3] - X[k & 3]) * f;
-        *oy = Y[k & 3] + (Y[(k + 1) & 3] - Y[k & 3]) * f;
-        return;
-    }
-    // regular polygon: triangle / pentagon / hexagon
-    uint8_t n   = (s == SHP_TRI) ? 3 : (s == SHP_PENTA) ? 5 : 6;
-    float   r   = (s == SHP_TRI) ? 70.0f : 58.0f;
-    float   seg = th / (6.28318f / n);
-    uint8_t k   = (uint8_t)seg;
-    float   f   = seg - (float)k;
-    float   x0, y0, x1, y1;
-    shp_poly_v(n, r, k % n, &x0, &y0);
-    shp_poly_v(n, r, (k + 1) % n, &x1, &y1);
-    *ox = x0 + (x1 - x0) * f;
-    *oy = y0 + (y1 - y0) * f;
-}
-
-static void dvd_stop(void) {
-    if (dvd_on) {
-        dvd_on = false;
-        digitizer_in_range_off(); // lift the absolute pointer
-    }
-}
-
-static void shp_start(uint8_t s) {
-    shp_active = s;
-    shp_theta  = 0;
-    shp_ax = shp_ay = 0;
-    shp_timer = timer_read();
-    draw_on   = false; // shapes and name-drawing are mutually exclusive
-    dvd_stop();        // ...and the full-screen bounce
-}
-
-// One shape per key: tap starts it, tap the same key again stops it.
-static void shp_toggle(uint8_t s) {
-    if (shp_active == s)
-        shp_active = SHP_OFF;
-    else
-        shp_start(s);
-}
-
-// Full-screen DVD bounce toggle (layer 1 · F9).
-static void dvd_toggle(void) {
-    if (dvd_on) {
-        dvd_stop();
-    } else {
-        shp_active = SHP_OFF; // one auto-mover at a time
-        draw_on    = false;
-        dvd_on     = true;
-        dvd_timer  = timer_read();
-        digitizer_in_range_on();
-    }
-}
-
-// --- Mouse character-drawing engine (drives the pinyin IME "confirm") ---
-// Traces a glyph's stroke polylines with the mouse, holding the left button
-// during a stroke and lifting it between strokes, so it draws in a paint app.
-// The glyph is supplied by the IME (dr_* pointers) via draw_begin().
-static uint8_t  draw_s = 0, draw_p = 0, draw_phase = 0; // phase 0=pen-up move, 1=drawing, 2=final release
-static uint16_t draw_base = 0, draw_timer = 0;
-float           draw_cx = 0, draw_cy = 0;         // continuous virtual pen pos (shared with the IME, see include/ime.h)
-static float    draw_fx = 0, draw_fy = 0;
-static const int16_t *dr_x = NULL, *dr_y = NULL;
-static const uint8_t *dr_len = NULL;
-static uint8_t        dr_ns = 0;
-// Sentence carriage: each dictionary glyph is centred on its own origin, so we
-// place that origin at carriage_x and step it right after every confirmed
-// character. draw_cx/cy stay continuous so the pen just travels to the next cell.
-float        carriage_x = 0;   // x-origin for the next character (shared with the IME, see include/ime.h)
-static float draw_home_x = 0;  // carriage_x captured when this character started
-#define CHAR_ADVANCE 130.0f    // horizontal step per character (glyphs are ~110 wide)
-
-void draw_begin(const int16_t *x, const int16_t *y, const uint8_t *len, uint8_t ns) {
-    shp_active = SHP_OFF; // don't run a shape or the bounce at the same time
-    dvd_stop();
-    dr_x = x; dr_y = y; dr_len = len; dr_ns = ns;
-    draw_on = true;
-    draw_s = draw_p = draw_phase = 0;
-    draw_base = 0;
-    draw_home_x = carriage_x; // draw this glyph at the current carriage position
-    draw_fx = draw_fy = 0;    // keep draw_cx/cy continuous across characters
-    draw_timer = timer_read();
-}
-
-// Hold-to-repeat for the RGB adjust keys (step is 1, so a hold ramps smoothly).
-#define RGB_HOLD_INTERVAL 28  // ms between repeats once auto-repeat is running
-#define RGB_HOLD_DELAY    350 // ms you must hold before auto-repeat starts (so a tap = exactly 1 step)
-static uint16_t rgb_hold_kc      = 0;
-static uint16_t rgb_hold_timer   = 0;
-static bool     rgb_hold_started = false; // has auto-repeat kicked in yet?
-
-// Palette-effect knob: turn = next/prev swatch, tap = reset, hold = type the live H,S,V.
-#define PAL_KNOB_HOLD_MS 500
-static bool     pal_knob_down    = false;
-static uint16_t pal_knob_timer   = 0;
-static bool     pal_knob_typed   = false; // did this hold already type the value?
-static uint8_t  pal_put_u8(char *s, uint8_t v) { // append v as decimal, return chars written
-    uint8_t n = 0;
-    if (v >= 100) s[n++] = '0' + v / 100;
-    if (v >= 10)  s[n++] = '0' + (v / 10) % 10;
-    s[n++] = '0' + v % 10;
-    return n;
-}
-static void pal_type_hsv(void) { // type "H,S,V" of the live color over USB (no trailing Enter)
-    char b[16]; uint8_t n = 0;
-    n += pal_put_u8(b + n, rgb_matrix_get_hue()); b[n++] = ',';
-    n += pal_put_u8(b + n, rgb_matrix_get_sat()); b[n++] = ',';
-    n += pal_put_u8(b + n, rgb_matrix_get_val());
-    b[n] = 0;
-    send_string(b);
-}
-static void rgb_hold_apply(uint16_t kc) {
-    switch (kc) {
-        case UG_HUEU: rgb_matrix_increase_hue_noeeprom(); break;
-        case UG_HUED: rgb_matrix_decrease_hue_noeeprom(); break;
-        case UG_SATU: rgb_matrix_increase_sat_noeeprom(); break;
-        case UG_SATD: rgb_matrix_decrease_sat_noeeprom(); break;
-        case UG_VALU: rgb_matrix_increase_val_noeeprom(); break;
-        case UG_VALD: rgb_matrix_decrease_val_noeeprom(); break;
-        case UG_SPDU: rgb_matrix_increase_speed_noeeprom(); break;
-        case UG_SPDD: rgb_matrix_decrease_speed_noeeprom(); break;
-    }
-}
-
-// Feedback while adjusting RGB:
-//   - min/max of saturation/brightness/speed -> BLINKS red (not a solid hold)
-//   - hue is cyclic -> board BLANKS once each time it passes through 0
-//     (hue 0 is red, so a red flash there wouldn't be visible)
-//   - default-layer change -> solid 1 s red flash (with the green layer meter)
-#define LAYER_FLASH_MS 1000 // solid red on layer change
-#define BLINK_HALF_MS  110  // min/max blink: red 110 ms on / 110 ms off
-#define LIMIT_FLASH_MS 220  // min/max window = one blink period (a tap still shows one pulse)
-#define HUE_FLASH_MS   140  // single blackout when hue wraps past 0
-enum flash_kind { FLASH_OFF, FLASH_LIMIT, FLASH_LAYER, FLASH_HUE };
-static enum flash_kind flash_mode  = FLASH_OFF;
-static uint16_t        flash_timer = 0;
-static uint16_t        flash_ms    = 0;
-static uint16_t        adj_check_kc = 0;
-static uint8_t         hue_before   = 0; // hue captured before an adjust, to detect a 0-wrap
-
-// Binary value display: while adjusting an RGB setting, show its 0-255 value as 8 bits
-// on the number row (key '1' = MSB (bit7) … key '8' = LSB (bit0)), color-coded per setting.
-#define BIN_SHOW_MS 2000                 // keep it lit this long after the last adjust
-static uint16_t bin_kc    = 0;           // which UG_* setting is being shown (0 = none)
-static uint16_t bin_timer = 0;
-static void flash_start(enum flash_kind k, uint16_t ms) { flash_mode = k; flash_timer = timer_read(); flash_ms = ms; }
-static bool rgb_at_limit(uint16_t kc) {
-    switch (kc) {
-        case UG_SATU: return rgb_matrix_get_sat() >= 255;
-        case UG_SATD: return rgb_matrix_get_sat() == 0;
-        case UG_VALU: return rgb_matrix_get_val() >= 255;
-        case UG_VALD: return rgb_matrix_get_val() <= RGB_MATRIX_BRIGHTNESS_TURN_OFF_VAL + RGB_MATRIX_VAL_STEP;
-        case UG_SPDU: return rgb_matrix_get_speed() >= 255;
-        case UG_SPDD: return rgb_matrix_get_speed() == 0;
-        default:      return false; // hue wraps -> no min/max
-    }
-}
-static void limit_check(uint16_t kc) {
-    if (rgb_at_limit(kc)) flash_start(FLASH_LIMIT, LIMIT_FLASH_MS);
-}
-static void hue_wrap_check(uint16_t kc, uint8_t before) { // cyclic hue crossed 0 -> one flash
-    uint8_t now = rgb_matrix_get_hue();
-    if ((kc == UG_HUEU && now < before) || (kc == UG_HUED && now > before)) flash_start(FLASH_HUE, HUE_FLASH_MS);
-}
-
-// The baked pinyin IME (Fn+I) lives in src/ime/ime.c behind include/ime.h. It
-// shares only the mouse-drawing engine above (draw_begin + carriage_x/draw_cx/cy).
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -389,8 +128,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         }
         if (record->event.key.row == 0 && record->event.key.col == 14) { // knob push (any layer)
-            if (record->event.pressed) { pal_knob_down = true; pal_knob_timer = timer_read(); pal_knob_typed = false; }
-            else { pal_knob_down = false; if (!pal_knob_typed) palette_reset(); } // tap = reset (hold already typed)
+            rgbfx_pal_knob(record->event.pressed);                        // hold = type H,S,V; tap = reset
             return false;
         }
     }
@@ -401,7 +139,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     letters_process_record(keycode, record);
     // Longer red flash when the default layer changes.
     if (record->event.pressed && keycode >= QK_DEF_LAYER && keycode <= QK_DEF_LAYER_MAX) {
-        flash_start(FLASH_LAYER, LAYER_FLASH_MS);
+        rgbfx_flash_layer();
     }
     switch (keycode) {
         case MS_ACC4: // layer 1, F3: 1.0x -> speed level index 4 (mkspd_3)
@@ -413,32 +151,28 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case LT_CLEAR: // Win Fn (layer 3), Backspace: reset the marquee / letter buffer
             if (record->event.pressed) letters_clear();
             return false;
-        case MS_SH1: if (record->event.pressed) shp_toggle(SHP_INFH);   return false; // 1  ∞ infinity
-        case MS_SH2: if (record->event.pressed) shp_toggle(SHP_CIRCLE); return false; // 2  circle
-        case MS_SH3: if (record->event.pressed) shp_toggle(SHP_TRI);    return false; // 3  triangle
-        case MS_SH4: if (record->event.pressed) shp_toggle(SHP_SQUARE); return false; // 4  square
-        case MS_SH5: if (record->event.pressed) shp_toggle(SHP_HEX);    return false; // 5  hexagon
-        case MS_SH6: if (record->event.pressed) shp_toggle(SHP_STAR);   return false; // 6  star
-        case MS_SH7: if (record->event.pressed) shp_toggle(SHP_HEART);  return false; // 7  heart
-        case MS_SH8: if (record->event.pressed) shp_toggle(SHP_SPIRO);  return false; // 8  spirograph
-        case MS_SH9: if (record->event.pressed) shp_toggle(SHP_SPIRAL); return false; // 9  spiral
-        case MS_SH0: if (record->event.pressed) shp_toggle(SHP_LISS);   return false; // 0  lissajous
-        case MS_DVD:  if (record->event.pressed) dvd_toggle();  return false; // F9: full-screen DVD bounce
+        case MS_SH1: if (record->event.pressed) mouse_shape_toggle(SHP_INFH);   return false; // 1  ∞ infinity
+        case MS_SH2: if (record->event.pressed) mouse_shape_toggle(SHP_CIRCLE); return false; // 2  circle
+        case MS_SH3: if (record->event.pressed) mouse_shape_toggle(SHP_TRI);    return false; // 3  triangle
+        case MS_SH4: if (record->event.pressed) mouse_shape_toggle(SHP_SQUARE); return false; // 4  square
+        case MS_SH5: if (record->event.pressed) mouse_shape_toggle(SHP_HEX);    return false; // 5  hexagon
+        case MS_SH6: if (record->event.pressed) mouse_shape_toggle(SHP_STAR);   return false; // 6  star
+        case MS_SH7: if (record->event.pressed) mouse_shape_toggle(SHP_HEART);  return false; // 7  heart
+        case MS_SH8: if (record->event.pressed) mouse_shape_toggle(SHP_SPIRO);  return false; // 8  spirograph
+        case MS_SH9: if (record->event.pressed) mouse_shape_toggle(SHP_SPIRAL); return false; // 9  spiral
+        case MS_SH0: if (record->event.pressed) mouse_shape_toggle(SHP_LISS);   return false; // 0  lissajous
+        case MS_DVD:  if (record->event.pressed) mouse_dvd_toggle();  return false; // F9: full-screen DVD bounce
         case BLK_TOGG: // Win Fn (layer 3) < (ISO key left of Z): enter block/lock mode (Fn+< again exits); persists across power-off
             if (record->event.pressed) set_locked(true);
             return false;
         case LAY_SHOW: // Win Fn (layer 3) L: flash the layer meter WITHOUT changing the layer
-            if (record->event.pressed) flash_start(FLASH_LAYER, LAYER_FLASH_MS);
+            if (record->event.pressed) rgbfx_flash_layer();
             return false;
         case ARCADE: // Fn + H: open the on-keyboard arcade (knob-hold to exit)
             if (record->event.pressed) arcade_open(timer_read32());
             return false;
         case MS_STOP: // Win Fn (layer 3) Space: stop any running mouse animation (shape / DVD / draw)
-            if (record->event.pressed) {
-                shp_active = SHP_OFF;
-                dvd_stop();
-                if (draw_on) { draw_on = false; report_mouse_t rel = {0}; host_mouse_send(&rel); } // release the button mid-stroke
-            }
+            if (record->event.pressed) mouse_stop();
             return false;
         case MS_BOOST: { // Win Fn (layer 3) LShift: HOLD to boost speed to F4 (1.0x); restore on release
             static uint8_t boost_prev = 4;
@@ -451,19 +185,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
         case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:
-            if (record->event.pressed) {
-                hue_before       = rgb_matrix_get_hue(); // remember, to spot a 0-wrap after the tap
-                rgb_hold_kc      = keycode; // arm auto-repeat while held
-                rgb_hold_timer   = timer_read();
-                rgb_hold_started = false;    // wait RGB_HOLD_DELAY before the first repeat
-                adj_check_kc     = keycode;  // check min/max after the step applies
-                bin_kc = keycode; bin_timer = timer_read(); // show this setting's value in binary
-            } else {
-                if (rgb_hold_kc == keycode) rgb_hold_kc = 0;
-                // persist whatever value the hold reached
-                rgb_matrix_sethsv(rgb_matrix_get_hue(), rgb_matrix_get_sat(), rgb_matrix_get_val());
-                rgb_matrix_set_speed(rgb_matrix_get_speed());
-            }
+            if (record->event.pressed) rgbfx_adjust_press(keycode);
+            else                       rgbfx_adjust_release(keycode);
             return true; // let the normal handler apply the first (tap) step
     }
     return true;
@@ -471,116 +194,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 void housekeeping_task_user(void) {
     if (arcade_active()) { arcade_tick(); return; } // arcade runs alone
-    if (rgb_hold_kc && timer_elapsed(rgb_hold_timer) > (rgb_hold_started ? RGB_HOLD_INTERVAL : RGB_HOLD_DELAY)) {
-        uint8_t h0 = rgb_matrix_get_hue();
-        rgb_hold_apply(rgb_hold_kc);
-        rgb_hold_timer   = timer_read();
-        rgb_hold_started = true;      // now repeat fast
-        limit_check(rgb_hold_kc);     // pinned at a boundary re-arms the blink window
-        hue_wrap_check(rgb_hold_kc, h0); // one flash each time a held hue passes 0
-        bin_timer = timer_read();     // keep the binary readout alive while holding
-    }
-    if (adj_check_kc) { // one-shot check after a tap (value already applied)
-        limit_check(adj_check_kc);
-        hue_wrap_check(adj_check_kc, hue_before);
-        adj_check_kc = 0;
-    }
-    if (pal_knob_down && !pal_knob_typed && timer_elapsed(pal_knob_timer) > PAL_KNOB_HOLD_MS) {
-        pal_type_hsv();      // knob held long enough -> type the live H,S,V once
-        pal_knob_typed = true;
-    }
-
-    if (dvd_on && timer_elapsed(dvd_timer) > SHP_INTERVAL) { // full-screen bounce
-        dvd_timer   = timer_read();
-        uint8_t off = mousekey_get_offset();
-        if (off == 0) off = 1;
-        float spd = 0.5f + off * 0.05f; // pace follows the mouse-accel level (F1..F5)
-        dvd_px += dvd_vx * spd;
-        dvd_py += dvd_vy * spd;
-        if (dvd_px <= 0.0f)      { dvd_px = 0.0f; dvd_vx = -dvd_vx; }
-        else if (dvd_px >= 1.0f) { dvd_px = 1.0f; dvd_vx = -dvd_vx; }
-        if (dvd_py <= 0.0f)      { dvd_py = 0.0f; dvd_vy = -dvd_vy; }
-        else if (dvd_py >= 1.0f) { dvd_py = 1.0f; dvd_vy = -dvd_vy; }
-        digitizer_set_position(dvd_px, dvd_py); // absolute -> bounces off real edges
-    }
-
-    if (shp_active && timer_elapsed(shp_timer) > SHP_INTERVAL) {
-        shp_timer   = timer_read();
-        uint8_t off = mousekey_get_offset();
-        if (off == 0) off = 1;
-        float dth = 0.02f + off * 0.004f; // step size scales with accel level
-        float t0 = shp_theta, t1 = t0 + dth;
-        float x0, y0, x1, y1;
-        shp_pos(shp_active, t0, &x0, &y0);
-        shp_pos(shp_active, t1, &x1, &y1); // sinf/mod are periodic, so t1 > 2pi is fine
-        shp_ax += (x1 - x0);
-        shp_ay += (y1 - y0);
-        shp_theta = (t1 > 6.28318f) ? t1 - 6.28318f : t1;
-        int8_t mx = (int8_t)shp_ax, my = (int8_t)shp_ay;
-        shp_ax -= mx;
-        shp_ay -= my;
-        if (mx || my) {
-            report_mouse_t rep = {0};
-            rep.x = mx;
-            rep.y = my;
-            host_mouse_send(&rep);
-        }
-    }
-
-    if (draw_on && timer_elapsed(draw_timer) > SHP_INTERVAL) {
-        draw_timer = timer_read();
-        if (draw_phase == 2) { // finished: release the button
-            report_mouse_t rel = {0};
-            host_mouse_send(&rel);
-            draw_on = false;
-        } else {
-            uint8_t off = mousekey_get_offset();
-            if (off == 0) off = 1;
-            float   step = 2.0f + off * 0.4f;
-            uint8_t btn  = (draw_phase == 1) ? 0x01 : 0x00; // left button while drawing a stroke
-            uint8_t len  = dr_len[draw_s];
-            float   tx = draw_home_x + dr_x[draw_base + draw_p], ty = dr_y[draw_base + draw_p];
-            float   ex = tx - draw_cx, ey = ty - draw_cy;
-            float   dist = sqrtf(ex * ex + ey * ey);
-            float   mvx, mvy;
-            if (dist <= step + 0.01f) { // reached this point
-                mvx = ex; mvy = ey;
-                draw_cx = tx; draw_cy = ty;
-                if (draw_phase == 0) { // at stroke start -> pen down
-                    draw_phase = 1;
-                    draw_p     = 1;
-                } else {
-                    draw_p++;
-                    if (draw_p >= len) { // stroke finished -> lift, next stroke
-                        draw_phase = 0;
-                        draw_base += len;
-                        draw_s++;
-                        draw_p = 0;
-                        if (draw_s >= dr_ns) { draw_phase = 2; carriage_x += CHAR_ADVANCE; } // done -> advance to next cell
-                    }
-                }
-            } else {
-                mvx = ex / dist * step;
-                mvy = ey / dist * step;
-                draw_cx += mvx;
-                draw_cy += mvy;
-            }
-            draw_fx += mvx;
-            draw_fy += mvy;
-            int8_t rx = (int8_t)draw_fx, ry = (int8_t)draw_fy;
-            draw_fx -= rx;
-            draw_fy -= ry;
-            report_mouse_t rep = {0};
-            rep.x       = rx;
-            rep.y       = ry;
-            rep.buttons = btn;
-            host_mouse_send(&rep);
-        }
-    }
+    rgbfx_task(); // RGB adjust auto-repeat + min/max checks + palette knob-hold typing
+    mouse_task(); // DVD bounce / shape mover / character drawing
 }
-
-// snap an indicator color to a palette constant rendered at brightness v (max-channel)
-static RGB pal_rgb(HSV c, uint8_t v) { c.v = v; return hsv_to_rgb(c); }
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (arcade_active()) { arcade_render(led_min, led_max); return false; } // arcade owns the board
@@ -590,46 +206,6 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         return false;
     }
     if (ime_active()) { ime_render(led_min, led_max); return false; } // IME owns the board (src/ime/ime.c)
-    if (flash_mode != FLASH_OFF) {
-        if (timer_elapsed(flash_timer) < flash_ms) {
-            // min/max blinks (free-running clock, so it toggles even while re-armed on hold);
-            // layer flash stays solid red; hue-wrap BLANKS the board (hue 0 is red, so a red
-            // flash would be invisible — blacking out is what reads).
-            bool on = (flash_mode != FLASH_LIMIT) || (timer_read() % (2 * BLINK_HALF_MS)) < BLINK_HALF_MS;
-            if (on) {
-                RGB fl = pal_rgb((HSV)COL_RED, 255); // min/max + layer flash color
-                uint8_t fr = fl.r, fg = fl.g, fb = fl.b;
-                if (flash_mode == FLASH_HUE) { fr = fg = fb = 0; } // hue 0 = red -> blank instead
-                for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, fr, fg, fb); // whole board
-                if (flash_mode == FLASH_LAYER) { // layer change: green layer meter on top, ONLY during the 1 s flash
-                    RGB lm = pal_rgb((HSV)COL_GREEN, 220);
-                    uint8_t cur = get_highest_layer(layer_state | default_layer_state);
-                    for (uint8_t i = 0; i <= cur && i < 4; i++) {
-                        uint8_t led = g_led_config.matrix_co[0][1 + i]; // F1..F4 = matrix (0,1)..(0,4)
-                        if (led != NO_LED) rgb_matrix_set_color(led, lm.r, lm.g, lm.b);
-                    }
-                }
-            }
-        } else {
-            flash_mode = FLASH_OFF; // flash done -> back to the normal RGB effect
-        }
-    }
-    // Binary readout of the setting you're adjusting, on the number row.
-    // Key '1' = bit 7 (MSB) … key '8' = bit 0 (LSB); lit bit = setting color, clear bit = dim.
-    if (bin_kc && timer_elapsed(bin_timer) < BIN_SHOW_MS) {
-        uint8_t v = 0, cr = 0, cg = 0, cb = 0;
-        switch (bin_kc) {
-            case UG_HUEU: case UG_HUED: v = rgb_matrix_get_hue();   cr = 0;   cg = 200; cb = 0;   break; // Hue   → green
-            case UG_SATU: case UG_SATD: v = rgb_matrix_get_sat();   cr = 255; cg = 90;  cb = 0;   break; // Sat   → orange
-            case UG_VALU: case UG_VALD: v = rgb_matrix_get_val();   cr = 220; cg = 220; cb = 220; break; // Value → white
-            case UG_SPDU: case UG_SPDD: v = rgb_matrix_get_speed(); cr = 0;   cg = 180; cb = 200; break; // Speed → cyan
-        }
-        for (uint8_t b = 0; b < 8; b++) {
-            uint8_t led = g_led_config.matrix_co[1][1 + b]; // keys '1'..'8'
-            if (led == NO_LED) continue;
-            if ((v >> (7 - b)) & 1) rgb_matrix_set_color(led, cr, cg, cb); // 1 bit → setting color
-            else                    rgb_matrix_set_color(led, 16, 16, 16); // 0 bit → dim (so all 8 slots show)
-        }
-    }
+    rgbfx_render(led_min, led_max); // flash feedback + binary value readout, over the normal effect
     return true;
 }
