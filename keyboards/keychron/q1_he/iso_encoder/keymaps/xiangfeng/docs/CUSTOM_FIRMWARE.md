@@ -5,8 +5,8 @@ Custom build on top of the SRGBmods/Keychron QMK fork.
 
 The **entire custom build lives in this one keymap folder**
 (`keyboards/keychron/q1_he/iso_encoder/keymaps/xiangfeng/`) — keymap, config, custom RGB
-effects, the IME dictionary and these docs. Only two shared files keep small in-place patches
-(`quantum/mousekey.c`, `common/analog_matrix/profile.c`; see *Files* below).
+effects, the IME dictionary and these docs. Only three shared files keep small in-place patches
+(`quantum/mousekey.c`, `common/analog_matrix/profile.c`, `common/keychron_raw_hid.c`; see *Files* below).
 
 Build:
 
@@ -21,7 +21,7 @@ Flash the `.bin` with **QMK Toolbox** on Windows (DFU: switch to *Cable*, hold t
 - **[KEYMAP.md](KEYMAP.md)** — layers, custom keys, mouse speed / shape movers, RGB adjust keys, the pinyin IME, and the custom-keycode table.
 - **[IME.md](IME.md)** — the Fn+I pinyin input method: how it works end-to-end, the dictionary, and the code path.
 - **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** / **[FLAPPY.md](FLAPPY.md)** / **[DINO.md](DINO.md)** / **[MEMORY_GAME.md](MEMORY_GAME.md)** / **[REACTION.md](REACTION.md)** — the six on-keyboard arcade games (Fn+H).
-- **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–30).
+- **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–31).
 - **[MEMORY.md](MEMORY.md)** — flash / RAM / EEPROM storage map and the firmware size breakdown.
 
 This file is the overview of everything; the others go deeper.
@@ -40,8 +40,9 @@ Source: `src/letters.c` (registered as **USER** effects in `rgb_matrix_user.inc`
 | **Claude crab** | 28 | A hand-painted crab (from the key-painter tool) scuttles the dark board — **orange** shell (`COL_ORANGE`), **red** eyes (`COL_RED`), wiggling legs; press a key on its shell and it **stops** for a beat, then skitters off. Source: `src/crab.c`. |
 | **Palette** | 29 | Calibration tool: fills the board with one named color at a time. Turn the **knob** for next/prev swatch, HSV adjust keys to fine-tune (kept in RAM per swatch), **tap the knob** to reset a swatch, **hold the knob** to type its `H,S,V` out over USB. Colors live in `include/palette.h`. Source: `src/palette.c`. |
 | **Pressure Heatmap** | 30 | Analog effect: dark board; each key glows by its **live Hall-effect travel** (how far it's pressed), spreading heat to neighbors with falloff (deeper = spreads farther), cooling back to black on release. Cool→hot thermal ramp; dims with Fn+W/S; **cool-down rate = RGB speed (Fn+T/G)**. Reads `analog_matrix_get_travel()`. Source: `src/heatmap.c`. |
+| **Audio** | 31 | PC audio-spectrum visualizer: vertical EQ bars (green→yellow→red) driven by the `~/audio-keyboard` companion app over Raw HID (command `0xAC`, dispatched by Keychron's `kc_raw_hid_rx` → `kc_custom_hid_rx` weak hook). Bars fall to black with no app; dims with Fn+W/S. Source: `src/audio.c`. |
 
-- Select by cycling RGB modes (they're the last six effects) or from the VIA Effect dropdown.
+- Select by cycling RGB modes (they're the last seven effects) or from the VIA Effect dropdown.
 - Speed (marquee scroll) follows the global RGB speed (layer 1 · T / G).
 - **Reset the buffer:** **layer 3 · Backspace** (`LT_CLEAR`, Windows Fn). Nothing clears automatically — the text stays until you clear it.
 - Letters are intentionally coarse (one LED per staggered key).
@@ -166,14 +167,15 @@ Everything lives in **`keymaps/xiangfeng/`**. The custom C sources sit in a **`s
 - **`src/`** — custom C sources:
   - `src/hanzi_data.c` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
   - `src/arcade.c` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, score)
-  - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c`, `src/heatmap.c` — custom RGB effects
+  - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c`, `src/heatmap.c`, `src/audio.c` — custom RGB effects (`src/audio.c` also overrides the `kc_custom_hid_rx` hook to receive the audio companion app's Raw HID stream)
 - **`include/`** — headers: `palette.h` (15 named `COL_*` color constants, the single source of color for the effects/indicators/game palettes), `arcade.h`, `hanzi_data.h`, `tetris.h`
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references
 - docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `FLAPPY.md`, `DINO.md`, `MEMORY_GAME.md`, `REACTION.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
 
-Two shared files keep **small in-place patches** (they can't live in a keymap folder):
+Three shared files keep **small in-place patches** (they can't live in a keymap folder):
 - `quantum/mousekey.c` — 3 → 5 speed levels + `mousekey_set_accel_level()` / `mousekey_get_offset()` / `mousekey_get_accel_level()`
 - `keyboards/keychron/common/analog_matrix/profile.c` — baked HE profiles + SOCD (`profile_reset`)
+- `keyboards/keychron/common/keychron_raw_hid.c` — one `case 0xAC` + a weak `kc_custom_hid_rx()` hook so the keymap can receive a custom Raw HID stream (the audio visualizer) without touching VIA/Launcher
 
 ## Activation note
 Firmware code (letter effects, mouse mode, hold-repeat) works immediately after flashing. EEPROM-backed defaults (keymap, timeouts, HE profiles) load on an **EEPROM reset** — do one factory reset after flashing if they don't appear.

@@ -128,6 +128,11 @@ void kc_raw_hid_send(uint8_t src, uint8_t *data, uint8_t len) {
 #    endif
 }
 
+// Weak hook for a keymap-defined custom Raw HID command (0xAC). Default no-op so
+// every other board/keymap links cleanly; a keymap that wants it (e.g. the audio
+// visualiser) provides a strong override.
+__attribute__((weak)) void kc_custom_hid_rx(uint8_t *data, uint8_t length) { (void)data; (void)length; }
+
 bool kc_raw_hid_rx(uint8_t src, uint8_t *data, uint8_t length) {
 #    if defined(ANANLOG_MATRIX) && defined(VIA_ENABLE)
     if (src == RAW_HID_SRC_USB && data[0] == id_get_keyboard_value && data[1] == id_switch_matrix_state) {
@@ -246,6 +251,10 @@ bool kc_raw_hid_rx(uint8_t src, uint8_t *data, uint8_t length) {
             analog_matrix_rx(data, length);
             return true;
 #    endif
+        case 0xAC: // custom keymap command (audio visualiser band data)
+            kc_custom_hid_rx(data, length);
+            return true;
+
         case 0xAA:
             if (src == RAW_HID_SRC_USB) {
 #    ifdef LK_WIRELESS_ENABLE
