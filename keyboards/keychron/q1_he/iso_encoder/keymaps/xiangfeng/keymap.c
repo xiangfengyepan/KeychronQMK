@@ -24,7 +24,7 @@
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
 #include "digitizer.h" // absolute pointer, for the full-screen DVD bounce
-#include "include/hanzi_data.h" // baked pinyin -> stroke-median dictionary (IME)
+#include "include/ime.h"        // baked pinyin IME (compose mode, Fn+I) — logic in src/ime/ime.c
 #include "include/arcade.h"     // on-keyboard arcade (Fn+H): lobby, Tetris, Topo
 #include "include/palette.h"    // named-color calibration RGB effect (knob = next/prev/reset)
 #include <math.h>
@@ -212,18 +212,19 @@ static void dvd_toggle(void) {
 // The glyph is supplied by the IME (dr_* pointers) via draw_begin().
 static uint8_t  draw_s = 0, draw_p = 0, draw_phase = 0; // phase 0=pen-up move, 1=drawing, 2=final release
 static uint16_t draw_base = 0, draw_timer = 0;
-static float    draw_cx = 0, draw_cy = 0, draw_fx = 0, draw_fy = 0; // draw_cx/cy = continuous virtual pen pos
+float           draw_cx = 0, draw_cy = 0;         // continuous virtual pen pos (shared with the IME, see include/ime.h)
+static float    draw_fx = 0, draw_fy = 0;
 static const int16_t *dr_x = NULL, *dr_y = NULL;
 static const uint8_t *dr_len = NULL;
 static uint8_t        dr_ns = 0;
 // Sentence carriage: each dictionary glyph is centred on its own origin, so we
 // place that origin at carriage_x and step it right after every confirmed
 // character. draw_cx/cy stay continuous so the pen just travels to the next cell.
-static float carriage_x = 0;   // x-origin for the next character
+float        carriage_x = 0;   // x-origin for the next character (shared with the IME, see include/ime.h)
 static float draw_home_x = 0;  // carriage_x captured when this character started
 #define CHAR_ADVANCE 130.0f    // horizontal step per character (glyphs are ~110 wide)
 
-static void draw_begin(const int16_t *x, const int16_t *y, const uint8_t *len, uint8_t ns) {
+void draw_begin(const int16_t *x, const int16_t *y, const uint8_t *len, uint8_t ns) {
     shp_active = SHP_OFF; // don't run a shape or the bounce at the same time
     dvd_stop();
     dr_x = x; dr_y = y; dr_len = len; dr_ns = ns;
@@ -290,6 +291,12 @@ static uint16_t        flash_timer = 0;
 static uint16_t        flash_ms    = 0;
 static uint16_t        adj_check_kc = 0;
 static uint8_t         hue_before   = 0; // hue captured before an adjust, to detect a 0-wrap
+
+// Binary value display: while adjusting an RGB setting, show its 0-255 value as 8 bits
+// on the number row (key '1' = MSB (bit7) … key '8' = LSB (bit0)), color-coded per setting.
+#define BIN_SHOW_MS 2000                 // keep it lit this long after the last adjust
+static uint16_t bin_kc    = 0;           // which UG_* setting is being shown (0 = none)
+static uint16_t bin_timer = 0;
 static void flash_start(enum flash_kind k, uint16_t ms) { flash_mode = k; flash_timer = timer_read(); flash_ms = ms; }
 static bool rgb_at_limit(uint16_t kc) {
     switch (kc) {
@@ -310,71 +317,8 @@ static void hue_wrap_check(uint16_t kc, uint8_t before) { // cyclic hue crossed 
     if ((kc == UG_HUEU && now < before) || (kc == UG_HUED && now > before)) flash_start(FLASH_HUE, HUE_FLASH_MS);
 }
 
-// ---------------- Baked pinyin IME ----------------
-// Fn+I toggles IME mode. While on: type pinyin (letters) -> candidates load;
-// Left/Right (or Tab) cycle; 1-9 jump to a candidate; Space/Enter confirm and
-// draw the character with the mouse; Backspace deletes a letter; Esc cancels.
-// The current candidate is animated stroke-by-stroke across the RGB LEDs.
-#define PY_MAX 7
-#define IME_CAND_MAX 12   // cap candidates to the F-row (F1..F12)
-#define IME_LED_MAX 220
-#define IME_LED_SCALE 0.46f // glyph units -> LED grid
-static bool     ime_on = false;
-static char     py_buf[PY_MAX + 1];
-static uint8_t  py_len = 0;
-static uint16_t cand[IME_CAND_MAX];
-static uint8_t  cand_n = 0, cand_i = 0;
-static uint8_t  ime_leds[IME_LED_MAX];
-static uint16_t ime_led_n = 0, ime_led_pos = 0, ime_led_timer = 0;
-
-static uint8_t nearest_led(float lx, float ly) {
-    uint8_t best = 0; float bd = 1e9f;
-    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-        float dx = (float)g_led_config.point[i].x - lx;
-        float dy = (float)g_led_config.point[i].y - ly;
-        float d = dx * dx + dy * dy;
-        if (d < bd) { bd = d; best = i; }
-    }
-    return best;
-}
-static void ime_led_add(float gx, float gy) { // map centred glyph point -> LED, append to path
-    uint8_t li = nearest_led(112.0f + gx * IME_LED_SCALE, 32.0f + gy * IME_LED_SCALE);
-    if (ime_led_n < IME_LED_MAX && (ime_led_n == 0 || ime_leds[ime_led_n - 1] != li))
-        ime_leds[ime_led_n++] = li;
-}
-static void ime_led_load(void) { // rasterise the current candidate into an ordered LED path
-    ime_led_n = 0; ime_led_pos = 0; ime_led_timer = timer_read();
-    if (!cand_n) return;
-    const hanzi_t *h = &hanzi_table[cand[cand_i]];
-    uint16_t base = 0;
-    for (uint8_t s = 0; s < h->nstroke; s++) {
-        uint8_t L = h->len[s];
-        ime_led_add(h->x[base], h->y[base]);
-        for (uint8_t p = 1; p < L; p++) {
-            float x1 = h->x[base + p - 1], y1 = h->y[base + p - 1];
-            float x0 = h->x[base + p],     y0 = h->y[base + p];
-            float dx = x0 - x1, dy = y0 - y1;
-            float dist = sqrtf(dx * dx + dy * dy);
-            uint8_t steps = (uint8_t)(dist / 6.0f) + 1;
-            for (uint8_t k = 1; k <= steps; k++) ime_led_add(x1 + dx * (float)k / steps, y1 + dy * (float)k / steps);
-        }
-        base += L;
-    }
-}
-static void ime_update(void) { // rebuild candidate list for the current pinyin prefix
-    cand_n = 0; cand_i = 0;
-    if (py_len)
-        for (uint16_t i = 0; i < hanzi_count && cand_n < IME_CAND_MAX; i++)
-            if (strncmp(hanzi_table[i].py, py_buf, py_len) == 0) cand[cand_n++] = (uint16_t)i;
-    ime_led_load();
-}
-static void ime_reset(void) { py_len = 0; py_buf[0] = 0; cand_n = 0; cand_i = 0; ime_led_n = 0; ime_led_pos = 0; }
-static void ime_confirm(void) {
-    if (!cand_n) return;
-    const hanzi_t *h = &hanzi_table[cand[cand_i]];
-    draw_begin(h->x, h->y, h->len, h->nstroke); // draw it with the mouse
-    ime_reset();                                // ready for the next character
-}
+// The baked pinyin IME (Fn+I) lives in src/ime/ime.c behind include/ime.h. It
+// shares only the mouse-drawing engine above (draw_begin + carriage_x/draw_cx/cy).
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -450,30 +394,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         }
     }
-    if (ime_on) { // compose mode: intercept typing, cycling and confirm
-        // F-row (matrix row 0, cols 1..12 = F1..F12) = jump to that candidate. Matched by POSITION,
-        // because on Mac base the top row sends media keys, not KC_F1. Navigates (doesn't confirm).
-        if (record->event.key.row == 0 && record->event.key.col >= 1 && record->event.key.col <= 12) {
-            if (record->event.pressed) { uint8_t k = record->event.key.col - 1; if (k < cand_n) { cand_i = k; ime_led_load(); } }
-            return false;
-        }
-        switch (keycode) {
-            case IME_TOGG: break; // toggle-off handled in the main switch below
-            case KC_ESC:  if (record->event.pressed) { ime_on = false; ime_reset(); } return false; // exit IME
-            case KC_BSPC: if (record->event.pressed && py_len) { py_buf[--py_len] = 0; ime_update(); } return false; // delete a letter
-            case KC_SPC:
-            case KC_ENT:  if (record->event.pressed) ime_confirm(); return false;                    // Space/Enter = confirm -> draw
-            case KC_TAB:
-            case KC_RGHT: if (record->event.pressed && cand_n) { cand_i = (cand_i + 1) % cand_n; ime_led_load(); } return false;         // next
-            case KC_LEFT: if (record->event.pressed && cand_n) { cand_i = (cand_i + cand_n - 1) % cand_n; ime_led_load(); } return false; // previous
-            default:
-                if (keycode >= KC_1 && keycode <= KC_0) return false; // number row is the length meter now — swallow; candidates are picked on the F-row
-                if (keycode >= KC_A && keycode <= KC_Z) { // build the pinyin buffer
-                    if (record->event.pressed && py_len < PY_MAX) { py_buf[py_len++] = 'a' + (keycode - KC_A); py_buf[py_len] = 0; ime_update(); }
-                    return false;
-                }
-                break; // modifiers / Fn / layer keys pass through (so Fn+I can toggle off)
-        }
+    if (ime_active()) { // compose mode: intercept typing, cycling and confirm (src/ime/ime.c)
+        if (ime_process_record(keycode, record)) return false; // key consumed by the IME
+        // else fall through so Fn+I (IME_TOGG) can toggle off and modifiers still work
     }
     letters_process_record(keycode, record);
     // Longer red flash when the default layer changes.
@@ -523,13 +446,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             else                       { mousekey_set_accel_level(boost_prev); }
             return false;
         }
-        case IME_TOGG: // Fn+I: toggle the pinyin IME
-            if (record->event.pressed) {
-                ime_on = !ime_on;
-                ime_reset();
-                ime_led_timer = timer_read();
-                if (ime_on) { carriage_x = 0; draw_cx = draw_cy = 0; } // start a fresh line at the cursor
-            }
+        case IME_TOGG: // Fn+I: toggle the pinyin IME (resets buffer + draw carriage in ime.c)
+            if (record->event.pressed) ime_toggle();
             return false;
         case UG_HUEU: case UG_HUED: case UG_SATU: case UG_SATD:
         case UG_VALU: case UG_VALD: case UG_SPDU: case UG_SPDD:
@@ -539,6 +457,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 rgb_hold_timer   = timer_read();
                 rgb_hold_started = false;    // wait RGB_HOLD_DELAY before the first repeat
                 adj_check_kc     = keycode;  // check min/max after the step applies
+                bin_kc = keycode; bin_timer = timer_read(); // show this setting's value in binary
             } else {
                 if (rgb_hold_kc == keycode) rgb_hold_kc = 0;
                 // persist whatever value the hold reached
@@ -559,6 +478,7 @@ void housekeeping_task_user(void) {
         rgb_hold_started = true;      // now repeat fast
         limit_check(rgb_hold_kc);     // pinned at a boundary re-arms the blink window
         hue_wrap_check(rgb_hold_kc, h0); // one flash each time a held hue passes 0
+        bin_timer = timer_read();     // keep the binary readout alive while holding
     }
     if (adj_check_kc) { // one-shot check after a tap (value already applied)
         limit_check(adj_check_kc);
@@ -669,36 +589,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, c.r, c.g, c.b);
         return false;
     }
-    if (ime_on) { // draw the candidate stroke-by-stroke over the whole board
-        for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, 0, 0, 0);
-        if (cand_n) {
-            if (led_min == 0 && timer_elapsed(ime_led_timer) > 55) { // advance once per frame
-                ime_led_timer = timer_read();
-                if (++ime_led_pos > ime_led_n + 6) ime_led_pos = 0; // loop with a short pause
-            }
-            RGB trail = pal_rgb((HSV)COL_CYAN, 170), head = pal_rgb((HSV)COL_GREEN_LIGHT, 255);
-            for (uint16_t i = 0; i < ime_led_n && i <= ime_led_pos; i++) rgb_matrix_set_color(ime_leds[i], trail.r, trail.g, trail.b);
-            if (ime_led_pos < ime_led_n) rgb_matrix_set_color(ime_leds[ime_led_pos], head.r, head.g, head.b); // bright head
-        } else { // IME on, no match yet -> faint "listening" glow (COL_SKY, very dim)
-            RGB c = pal_rgb((HSV)COL_SKY, 12);
-            for (uint8_t i = led_min; i < led_max; i++) rgb_matrix_set_color(i, c.r, c.g, c.b);
-        }
-        // number row = pinyin buffer length: 1 letter -> key '1', 2 -> '1'+'2', … (green); dark when empty
-        RGB buf = pal_rgb((HSV)COL_GREEN, 210);
-        for (uint8_t j = 1; j <= py_len && j <= 10; j++) {
-            uint8_t led = g_led_config.matrix_co[1][j]; // number row: col 1='1' … col 9='9', col 10='0'
-            if (led != NO_LED) rgb_matrix_set_color(led, buf.r, buf.g, buf.b);
-        }
-        // F1..F12 = candidate list; press a key to jump to it, the selected one is highlighted
-        RGB sel = pal_rgb((HSV)COL_PINK, 255), avail = pal_rgb((HSV)COL_CYAN, 200);
-        for (uint8_t j = 0; j < cand_n && j < 12; j++) {
-            uint8_t led = g_led_config.matrix_co[0][1 + j]; // F1=(0,1) … F12=(0,12)
-            if (led == NO_LED) continue;
-            if (j == cand_i) rgb_matrix_set_color(led, sel.r, sel.g, sel.b);   // selected candidate (COL_PINK)
-            else             rgb_matrix_set_color(led, avail.r, avail.g, avail.b); // available candidate (COL_CYAN)
-        }
-        return false;
-    }
+    if (ime_active()) { ime_render(led_min, led_max); return false; } // IME owns the board (src/ime/ime.c)
     if (flash_mode != FLASH_OFF) {
         if (timer_elapsed(flash_timer) < flash_ms) {
             // min/max blinks (free-running clock, so it toggles even while re-armed on hold);
@@ -721,6 +612,23 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             }
         } else {
             flash_mode = FLASH_OFF; // flash done -> back to the normal RGB effect
+        }
+    }
+    // Binary readout of the setting you're adjusting, on the number row.
+    // Key '1' = bit 7 (MSB) … key '8' = bit 0 (LSB); lit bit = setting color, clear bit = dim.
+    if (bin_kc && timer_elapsed(bin_timer) < BIN_SHOW_MS) {
+        uint8_t v = 0, cr = 0, cg = 0, cb = 0;
+        switch (bin_kc) {
+            case UG_HUEU: case UG_HUED: v = rgb_matrix_get_hue();   cr = 0;   cg = 200; cb = 0;   break; // Hue   → green
+            case UG_SATU: case UG_SATD: v = rgb_matrix_get_sat();   cr = 255; cg = 90;  cb = 0;   break; // Sat   → orange
+            case UG_VALU: case UG_VALD: v = rgb_matrix_get_val();   cr = 220; cg = 220; cb = 220; break; // Value → white
+            case UG_SPDU: case UG_SPDD: v = rgb_matrix_get_speed(); cr = 0;   cg = 180; cb = 200; break; // Speed → cyan
+        }
+        for (uint8_t b = 0; b < 8; b++) {
+            uint8_t led = g_led_config.matrix_co[1][1 + b]; // keys '1'..'8'
+            if (led == NO_LED) continue;
+            if ((v >> (7 - b)) & 1) rgb_matrix_set_color(led, cr, cg, cb); // 1 bit → setting color
+            else                    rgb_matrix_set_color(led, 16, 16, 16); // 0 bit → dim (so all 8 slots show)
         }
     }
     return true;

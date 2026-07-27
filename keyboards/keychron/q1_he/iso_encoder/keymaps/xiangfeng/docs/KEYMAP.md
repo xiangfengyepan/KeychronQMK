@@ -100,6 +100,12 @@ instead **blanks the board once** each time it passes through 0 (hue 0 is red, s
 | Hue ± | E / D | | Speed ± | T / G |
 | Saturation ± | R / F | | Toggle RGB | Tab |
 
+**Binary value readout.** While you adjust one of the four, its current **0–255 value** is shown in
+binary on the **number row**: key **`1` = MSB (128)** … key **`8` = LSB (1)**, read left→right. A **lit
+bit = 1** in the setting's color, a **dim bit = 0**. Colors: **Hue = green, Saturation = orange, Value =
+white, Speed = cyan**. It stays lit while adjusting and ~2 s after (a tap flashes it too). E.g. value
+`160` = `1010 0000` → keys `1` and `3` light.
+
 See [LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md) for the full effect list and order.
 
 ## Clear the letter/marquee buffer

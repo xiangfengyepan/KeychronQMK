@@ -152,7 +152,7 @@ games:
 | `MS_ACC5` | layer 1 · F4 | mouse speed 2.0× |
 | `MS_SH1`…`MS_SH0` | layer 1 · 1–0 | shape movers: ∞ / circle / triangle / square / hexagon / star / heart / spirograph / spiral / lissajous |
 | `MS_DVD` | layer 1 · F9 | full-screen DVD bounce (absolute digitizer) |
-| `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 276-char baked dictionary — 12 common chars per pinyin initial (`src/hanzi_data.c`). |
+| `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 276-char baked dictionary — 12 common chars per pinyin initial (`src/ime/hanzi_data.c`; logic in `src/ime/ime.c`). |
 | `MS_STOP` | layer 1 · Space **and** layer 3 · Space | stop any running mouse animation (shape mover / DVD bounce / IME draw); releases the button if mid-stroke |
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores the prior speed on release |
 | `BLK_TOGG` | layer 3 · < (ISO key left of Z) | block/lock mode — swallow all keys; Fn+< again exits; dim amber wash; **persists across power-off** |
@@ -162,15 +162,16 @@ games:
 
 ## Files
 Everything lives in **`keymaps/xiangfeng/`**. The custom C sources sit in a **`src/`** subfolder and the headers in **`include/`** (only `keymap.c` and `rgb_matrix_user.inc` must stay in the keymap root):
-- `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce, RGB hold-repeat + min/max & layer flash, the pinyin IME, `MS_STOP`, block/lock mode, arcade hooks
+- `keymap.c` — baked keymap, mouse-speed levels, shape movers, DVD bounce + the shared mouse-drawing engine, RGB hold-repeat + min/max & layer flash, thin pinyin-IME call-outs, `MS_STOP`, block/lock mode, arcade hooks
 - `config.h` — timeouts, RGB steps, mouse speeds, HE-profile defines, default effect
 - `rules.mk` — VIA + digitizer + custom **USER** RGB effects + `SRC` list (points at `src/*.c`)
 - `rgb_matrix_user.inc` — registers the custom USER RGB effects
 - **`src/`** — custom C sources:
-  - `src/hanzi_data.c` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
+  - `src/ime/ime.c` — the pinyin IME compose-mode logic (behind `include/ime.h`); `keymap.c` only calls into it — see [IME.md](IME.md)
+  - `src/ime/hanzi_data.c` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
   - `src/arcade.c` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, Drop-Merge, Pong, score)
   - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c`, `src/heatmap.c`, `src/audio.c` — custom RGB effects (`src/audio.c` also overrides the `kc_custom_hid_rx` hook to receive the audio companion app's Raw HID stream)
-- **`include/`** — headers: `palette.h` (15 named `COL_*` color constants, the single source of color for the effects/indicators/game palettes), `arcade.h`, `hanzi_data.h`, `tetris.h`
+- **`include/`** — headers: `palette.h` (15 named `COL_*` color constants, the single source of color for the effects/indicators/game palettes), `arcade.h`, `ime.h` (pinyin-IME public API), `hanzi_data.h`, `tetris.h`
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references
 - docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `FLAPPY.md`, `DINO.md`, `MEMORY_GAME.md`, `REACTION.md`, `DROP.md`, `PONG.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
 

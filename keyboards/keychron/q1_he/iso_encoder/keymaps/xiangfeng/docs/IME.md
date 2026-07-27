@@ -2,7 +2,7 @@
 
 A tiny **pinyin input method baked into the keyboard**: type a syllable, cycle candidates shown on
 the RGB LEDs, then confirm and the keyboard **draws the character with the mouse** in a paint app.
-Everything is in this folder — `keymap.c` (logic) + `src/hanzi_data.c` + `include/hanzi_data.h` (dictionary).
+Everything is in this folder — `src/ime/ime.c` (logic, behind `include/ime.h`) + `src/ime/hanzi_data.c` + `include/hanzi_data.h` (dictionary). `keymap.c` keeps only thin call-outs (`ime_active` / `ime_process_record` / `ime_render` / `ime_toggle`) plus the shared mouse-drawing engine.
 
 ---
 
@@ -34,7 +34,7 @@ Everything is in this folder — `keymap.c` (logic) + `src/hanzi_data.c` + `incl
 
 ---
 
-## 2. The dictionary — `src/hanzi_data.c` / `include/hanzi_data.h`
+## 2. The dictionary — `src/ime/hanzi_data.c` / `include/hanzi_data.h`
 
 - **276 characters** — the 12 most-common per usable pinyin initial (23 letters, no i/u/v). Your names
   come first for their syllable (`feng`→沣, `pan`→潘, `ye`→叶, `xiang`→祥 are the
@@ -65,7 +65,7 @@ extern const uint16_t hanzi_count;    // 276
 | **Make Me a Hanzi** — `graphics.txt` | per-character **stroke medians** (the drawing) | <https://github.com/skishore/makemeahanzi><br>raw: `https://raw.githubusercontent.com/skishore/makemeahanzi/master/graphics.txt` |
 | **hanziDB** — `data/hanziDB.csv` | **frequency rank** + **pinyin** (which characters, and their order) | <https://github.com/ruddfawcett/hanziDB.csv><br>raw: `https://raw.githubusercontent.com/ruddfawcett/hanziDB.csv/master/data/hanziDB.csv` |
 
-### Regenerating `src/hanzi_data.c`
+### Regenerating `src/ime/hanzi_data.c`
 For each usable pinyin initial (all letters **except i / u / v**, which have no syllables), take the
 **12 most-common characters** (by hanziDB `frequency_rank`) whose toneless pinyin starts with that
 letter and that have medians — forcing the name characters (沣/潘/叶/祥) first so they stay candidate 1.
@@ -81,7 +81,7 @@ resampling**). Emit the `x[]/y[]/l[]` arrays + a `hanzi_table[]` row, and set `h
 
 ---
 
-## 3. Code path (`keymap.c`)
+## 3. Code path (`src/ime/ime.c`)
 
 ### State
 ```c
