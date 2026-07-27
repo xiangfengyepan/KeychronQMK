@@ -21,7 +21,7 @@ Flash the `.bin` with **QMK Toolbox** on Windows (DFU: switch to *Cable*, hold t
 - **[KEYMAP.md](KEYMAP.md)** — layers, custom keys, mouse speed / shape movers, RGB adjust keys, the pinyin IME, and the custom-keycode table.
 - **[IME.md](IME.md)** — the Fn+I pinyin input method: how it works end-to-end, the dictionary, and the code path.
 - **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** / **[FLAPPY.md](FLAPPY.md)** / **[DINO.md](DINO.md)** / **[MEMORY_GAME.md](MEMORY_GAME.md)** / **[REACTION.md](REACTION.md)** — the six on-keyboard arcade games (Fn+H).
-- **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–29).
+- **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–30).
 - **[MEMORY.md](MEMORY.md)** — flash / RAM / EEPROM storage map and the firmware size breakdown.
 
 This file is the overview of everything; the others go deeper.
@@ -39,8 +39,9 @@ Source: `src/letters.c` (registered as **USER** effects in `rgb_matrix_user.inc`
 | **Spider-Man** | 27 | Red mask with two white angular eyes (occasional blink); each keypress fires a quick white web-burst. **Power-on default** (`RGB_MATRIX_DEFAULT_MODE`). Source: `src/spider_mask.c`. |
 | **Claude crab** | 28 | A hand-painted crab (from the key-painter tool) scuttles the dark board — **orange** shell (`COL_ORANGE`), **red** eyes (`COL_RED`), wiggling legs; press a key on its shell and it **stops** for a beat, then skitters off. Source: `src/crab.c`. |
 | **Palette** | 29 | Calibration tool: fills the board with one named color at a time. Turn the **knob** for next/prev swatch, HSV adjust keys to fine-tune (kept in RAM per swatch), **tap the knob** to reset a swatch, **hold the knob** to type its `H,S,V` out over USB. Colors live in `include/palette.h`. Source: `src/palette.c`. |
+| **Pressure Heatmap** | 30 | Analog effect: dark board; each key glows by its **live Hall-effect travel** (how far it's pressed), spreading heat to neighbors with falloff (deeper = spreads farther), cooling back to black on release. Cool→hot thermal ramp; dims with Fn+W/S; **cool-down rate = RGB speed (Fn+T/G)**. Reads `analog_matrix_get_travel()`. Source: `src/heatmap.c`. |
 
-- Select by cycling RGB modes (they're the last five effects) or from the VIA Effect dropdown.
+- Select by cycling RGB modes (they're the last six effects) or from the VIA Effect dropdown.
 - Speed (marquee scroll) follows the global RGB speed (layer 1 · T / G).
 - **Reset the buffer:** **layer 3 · Backspace** (`LT_CLEAR`, Windows Fn). Nothing clears automatically — the text stays until you clear it.
 - Letters are intentionally coarse (one LED per staggered key).
@@ -165,7 +166,7 @@ Everything lives in **`keymaps/xiangfeng/`**. The custom C sources sit in a **`s
 - **`src/`** — custom C sources:
   - `src/hanzi_data.c` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
   - `src/arcade.c` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, score)
-  - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c` — custom RGB effects
+  - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c`, `src/heatmap.c` — custom RGB effects
 - **`include/`** — headers: `palette.h` (15 named `COL_*` color constants, the single source of color for the effects/indicators/game palettes), `arcade.h`, `hanzi_data.h`, `tetris.h`
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references
 - docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `FLAPPY.md`, `DINO.md`, `MEMORY_GAME.md`, `REACTION.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`

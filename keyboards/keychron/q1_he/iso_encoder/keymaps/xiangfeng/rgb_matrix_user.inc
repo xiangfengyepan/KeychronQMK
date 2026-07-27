@@ -9,6 +9,7 @@ RGB_MATRIX_EFFECT(LETTERS_BIG)
 RGB_MATRIX_EFFECT(SPIDER_MASK)
 RGB_MATRIX_EFFECT(CRAB)
 RGB_MATRIX_EFFECT(PALETTE)
+RGB_MATRIX_EFFECT(HEATMAP)
 
 #ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 
@@ -35,6 +36,11 @@ bool CRAB(effect_params_t *params) {
 bool PALETTE(effect_params_t *params) {
     extern bool palette_effect(effect_params_t * params);
     return palette_effect(params);
+}
+
+bool HEATMAP(effect_params_t *params) {
+    extern bool heatmap_effect(effect_params_t * params);
+    return heatmap_effect(params);
 }
 
 #endif
