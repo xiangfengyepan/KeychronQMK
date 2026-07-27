@@ -137,7 +137,7 @@ games:
 | **Tetris** | 5×13 well, knob rotates, PgUp/PgDn move, Home drops | [TETRIS.md](TETRIS.md) |
 | **Topo** | whack-a-mole, sudden death, exponential spawn ramp | [TOPO.md](TOPO.md) |
 | **Flappy** | fly through pipe gaps; knob tap or any key = flap | [FLAPPY.md](FLAPPY.md) |
-| **Dino** | Space = jump (tap 2 / hold 3), Ctrl = duck | [DINO.md](DINO.md) |
+| **Dino** | Space = jump (tap ≈2 rows; hold = float down slower), Ctrl = duck | [DINO.md](DINO.md) |
 | **Memory** | Simon on all 82 keys; repeat the flashed sequence | [MEMORY_GAME.md](MEMORY_GAME.md) |
 | **Reaction** | wait for green, hit any key fast; 3 rounds, avg / 82 | [REACTION.md](REACTION.md) |
 | **Drop-Merge** | color-2048 in a 4×13 well; PgUp/PgDn move, Home drops, merge same colors | [DROP.md](DROP.md) |

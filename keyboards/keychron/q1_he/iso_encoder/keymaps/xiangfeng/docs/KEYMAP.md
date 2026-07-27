@@ -133,7 +133,7 @@ start/action, **hold ~0.5 s = quit / exit**). Eight games:
 | **Tetris** | fit falling tetrominoes | knob turn = rotate · PgUp/PgDn = move · Home = drop | [TETRIS.md](TETRIS.md) |
 | **Topo** | whack-a-mole, sudden death | press the lit key | [TOPO.md](TOPO.md) |
 | **Flappy** | fly through pipe gaps | knob tap **or any key** = flap | [FLAPPY.md](FLAPPY.md) |
-| **Dino** | jump/duck past obstacles | **Space** = jump (tap 2 / hold 3) · **Ctrl** = duck · knob = jump | [DINO.md](DINO.md) |
+| **Dino** | jump/duck past obstacles | **Space** = jump (tap ≈2 rows; **hold = float down slower**) · **Ctrl** = duck · knob = jump | [DINO.md](DINO.md) |
 | **Memory** | Simon on all keys | repeat the flashed sequence by pressing the keys | [MEMORY_GAME.md](MEMORY_GAME.md) |
 | **Reaction** | reflex test | wait for green, hit **any key** fast; 3 rounds, avg out of 82 | [REACTION.md](REACTION.md) |
 | **Drop-Merge** | color-2048, 4×13 well | PgUp/PgDn = move · Home = drop · merge same-color boxes | [DROP.md](DROP.md) |

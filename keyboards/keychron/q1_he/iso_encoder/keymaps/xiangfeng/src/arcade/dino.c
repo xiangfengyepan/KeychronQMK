@@ -20,7 +20,7 @@ void dino_jump(void) { if (d_bottom >= 3.99f) d_vy = -0.35f; } // impulse: tap c
 void dino_tick(void) {
     uint32_t now = timer_read32(); float dt = (float)(now - phys_last); phys_last = now;
     float s = dt / 16.67f;
-    float g = (d_vy < 0 && d_space_held) ? 0.015f : 0.03f; // hold Space while rising = higher jump (~3 rows)
+    float g = (d_vy > 0 && d_space_held) ? 0.0035f : 0.03f; // tap = ~2-row jump; HOLD while falling = strong float (~2× reach); release → instantly back to 0.03
     d_vy += g * s; d_bottom += d_vy * s;
     if (d_bottom >= 4) { d_bottom = 4; d_vy = 0; }
     if (d_bottom < 1) { d_bottom = 1; if (d_vy < 0) d_vy = 0; }
@@ -44,7 +44,7 @@ void dino_render(void) {
     if (ducking) px(4, D_COL, 110, 230, 140);
     else { int8_t rb = iround(d_bottom); for (int8_t r = rb - 1; r <= rb; r++) if (r >= 0 && r < 5) px(r, D_COL, 110, 230, 140); }
 }
-/* Space = jump (hold = higher); Ctrl = duck. Called from arcade_key while A_DINO. */
+/* Space = jump (tap ~2 rows; hold = float down slower); Ctrl = duck. Called from arcade_key while A_DINO. */
 void dino_key(uint8_t row, uint8_t col, bool pressed) {
     if (row == 5 && col == 6) { d_space_held = pressed; if (pressed) dino_jump(); }
     else if (row == 5 && (col == 0 || col == 11)) d_duck = pressed;

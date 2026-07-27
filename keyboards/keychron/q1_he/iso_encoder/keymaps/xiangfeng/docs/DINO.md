@@ -27,15 +27,18 @@ Two obstacle kinds:
 | **Knob press** | jump too (tap height only — the knob can't hold-for-higher) |
 | **Knob hold (~0.5 s)** | quit to the lobby |
 
-> Jump over the **bottom** obstacles (2 rows is plenty; hold for the taller gaps), **duck** under the
-> **top** ones. Space = `matrix (5,6)`, Ctrl = `matrix (5,0)`/`(5,11)` — the arcade owns the board, so
+> Jump over the **bottom** obstacles, **duck** under the **top** ones. **Tap Space** for a fixed ~2-row
+> jump; **hold Space while falling** to **float down slower** (hang time to clear a wider gap), not to
+> jump higher. Space = `matrix (5,6)`, Ctrl = `matrix (5,0)`/`(5,11)` — the arcade owns the board, so
 > these don't type.
 
 ## Physics (ported from the prototype)
 Frame-rate independent (`s = dt / 16.67`):
-- gravity `d_vy += g·s` where `g = 0.03`, or **`0.015` while rising with Space held** (higher jump);
-  jump sets `d_vy = −0.35` (grounded only). The dino clamps between the ground (row 4) and a ceiling at
-  row 1 — so a held jump tops out at ~3 rows.
+- gravity `d_vy += g·s` where `g = 0.03` normally, or **`0.0035` while *descending* (`d_vy > 0`) with Space
+  held** — a strong float that roughly **doubles the air time / horizontal reach**. Rising always uses the
+  full `0.03`, so the jump apex is fixed by the impulse `d_vy = −0.35` (grounded only) at **~2 rows**
+  regardless of holding. **Release mid-float → gravity snaps back to `0.03`** (re-evaluated every frame), so
+  you drop immediately when you let go.
 - obstacle speed starts `0.06` col/frame and creeps up (`+0.000015·dt`); next obstacle in
   `850 + rnd()%450` ms.
 
