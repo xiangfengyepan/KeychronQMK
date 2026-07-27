@@ -7,8 +7,10 @@
 
 /* ================= DROP-MERGE — color 2048 on a 4x13 well =================
  * Ported 1:1 from arcade.html (drop* functions). A colored box falls under gravity
- * down keyboard rows 1-4 (row 0 / F-row is a static tier legend). Vertical-only merges:
- * landing on a same-color box promotes to the next tier and chains upward. Spawn pool
+ * down keyboard rows 1-4 (row 0 / F-row is a static tier legend). Merges: a landed box
+ * merges VERTICALLY (same-color box below) and HORIZONTALLY (same-color box at the same
+ * height in an adjacent lane, pulled into the dropped lane; the neighbor's gap collapses
+ * with gravity), promoting to the next tier and chaining fully both ways. Spawn pool
  * grows: tiers 0-2 always spawn; a tier >=3 joins the pool once 3 of it have been made. */
 #define DWID     4
 #define DLEN     13
@@ -25,18 +27,45 @@ static void drop_spawn(void) {
     if (dcount[DSPAWN] >= DLEN) { dbox_live = false; game_over(dmaxtier, 6); return; }
     dbox_color = rnd() % (dpool + 1); dbox_a = DSPAWN; dbox_f = 0; dbox_live = true; dgrav_t = timer_read32();
 }
-static void drop_merge(uint8_t a) {                 // vertical-only chain at the top of a column
-    while (dcount[a] >= 2 && dstack[a][dcount[a] - 1] == dstack[a][dcount[a] - 2] && dstack[a][dcount[a] - 1] < DTIER_MAX) {
-        dcount[a]--;                                // remove the top box...
-        uint8_t nt = ++dstack[a][dcount[a] - 1];    // ...and promote the one below it
-        dmerges++;
-        if (nt > dmaxtier) dmaxtier = nt;
-        if (nt < 9) dmade[nt]++;
-        if (nt >= 3 && dmade[nt] >= 3 && nt > dpool) dpool = nt; // 3 made of a tier (>=3) unlocks it into the pool
+static void drop_bookkeep(uint8_t nt) {             // record one promotion to tier nt
+    dmerges++;
+    if (nt > dmaxtier) dmaxtier = nt;
+    if (nt < 9) dmade[nt]++;
+    if (nt >= 3 && dmade[nt] >= 3 && nt > dpool) dpool = nt; // 3 made of a tier (>=3) unlocks it into the pool
+}
+// Resolve merges around the active box (the top of lane `a`, i.e. the piece just dropped):
+//  - VERTICAL: same-color box directly below in the same lane -> promote it, active drops onto it.
+//  - HORIZONTAL: same-color box at the SAME height in an adjacent lane -> promote the active (it
+//    stays in lane `a`) and PULL the neighbor's box out; boxes above the gap fall down (gravity).
+// Re-checks after every merge and chains fully (both directions) until nothing else matches.
+static void drop_resolve(uint8_t a) {
+    bool merged = true;
+    while (merged && dcount[a] > 0) {
+        merged = false;
+        uint8_t i = dcount[a] - 1, t = dstack[a][i]; // active box
+        if (t >= DTIER_MAX) break;                   // white can't promote further
+        if (i >= 1 && dstack[a][i - 1] == t) {       // vertical: box below matches
+            dcount[a]--;
+            dstack[a][i - 1] = t + 1;
+            drop_bookkeep(t + 1);
+            merged = true;
+            continue;
+        }
+        for (int8_t dir = -1; dir <= 1 && !merged; dir += 2) { // horizontal: same-height neighbor
+            int8_t na = (int8_t)a + dir;
+            if (na < 0 || na >= DWID) continue;
+            if (i < dcount[na] && dstack[na][i] == t) {
+                dstack[a][i] = t + 1;                            // promote active (stays in lane a)
+                drop_bookkeep(t + 1);
+                for (uint8_t k = i; k + 1 < dcount[na]; k++) dstack[na][k] = dstack[na][k + 1]; // gravity
+                dcount[na]--;
+                merged = true;
+            }
+        }
     }
 }
 static void drop_land(void) {
-    uint8_t a = dbox_a; dstack[a][dcount[a]++] = dbox_color; drop_merge(a); dbox_live = false;
+    uint8_t a = dbox_a; dstack[a][dcount[a]++] = dbox_color; drop_resolve(a); dbox_live = false;
     if (dcount[a] >= DLEN) { game_over(dmaxtier, 6); return; }   // column overflowed the top edge
     drop_spawn();
 }

@@ -45,9 +45,10 @@ pool are at **full brightness**; locked higher tiers are **dimmed to ~22 %**. Dr
 (Same three keys Tetris uses.)
 
 ## Mechanics
-- **Merge (vertical only):** when the box lands, if the top two boxes of that column share a color (and
-  are below tier 8) they collapse into one box of the **next** tier; this repeats upward while the new
-  top matches the box below it (`drop_merge`).
+- **Merge (vertical + horizontal):** when the box lands (`drop_resolve`), the active box merges either way:
+  - **Vertical** — a same-color box directly below in the same lane promotes to the next tier (active drops onto it).
+  - **Horizontal** — a same-color box at the **same height in an adjacent lane** is **pulled into the dropped lane**: the active box promotes and stays put, the neighbor's box is removed, and any boxes above the gap **fall down (gravity)**. So dropping a matching color lets you *move a block sideways* out of a neighbor lane.
+  It re-checks after every merge and **chains fully** (both directions) until nothing else matches. Nothing merges past tier 8 (white).
 - **Growing spawn pool:** starts at tiers **0–2** (F1–F3). A cumulative `dmade[tier]` counts every box of
   each tier ever **created by a merge**; once a tier ≥ 3 reaches **3 created**, it permanently joins the
   pool (`dpool`) — so 3× tier-3 boxes unlock tier 3, etc. Each spawn picks **uniformly** across the
@@ -66,7 +67,7 @@ pool are at **full brightness**; locked higher tiers are **dimmed to ~22 %**. Dr
 ## Tuning (in `src/arcade.c`)
 - `DWID` / `DLEN` — well size; `drow(a)` / `dcol(a, f)` — the cell → matrix mapping.
 - `DTIER[]` — the 9 tier colors (palette constants).
-- `dpool` start value (2) in `drop_start`, and the `dmade[nt] >= 3` unlock threshold in `drop_merge`.
+- `dpool` start value (2) in `drop_start`, and the `dmade[nt] >= 3` unlock threshold in `drop_bookkeep`.
 - `dgrav_ms` (480) — fall speed.
 - The legend dim factor (`* 22 / 100`) in `drop_render`.
 - Fill target `tier / 8` (case 6) in `game_over`.
