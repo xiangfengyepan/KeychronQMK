@@ -126,7 +126,7 @@ gaming), **C = `PROF3`** (Profile 3). One tap jumps straight to that profile.
 ## Arcade — Fn + H
 **layer 1 · H / layer 3 · H** (`ARCADE`) opens a tiny arcade on the RGB grid. While open it **owns the
 whole board and swallows all keys**; the **knob** is the shared control (turn = browse/rotate, tap =
-start/action, **hold ~0.5 s = quit / exit**). Six games:
+start/action, **hold ~0.5 s = quit / exit**). Eight games:
 
 | Game | Play | Controls (beyond knob-hold = quit) | Doc |
 |---|---|---|---|
@@ -136,6 +136,8 @@ start/action, **hold ~0.5 s = quit / exit**). Six games:
 | **Dino** | jump/duck past obstacles | **Space** = jump (tap 2 / hold 3) · **Ctrl** = duck · knob = jump | [DINO.md](DINO.md) |
 | **Memory** | Simon on all keys | repeat the flashed sequence by pressing the keys | [MEMORY_GAME.md](MEMORY_GAME.md) |
 | **Reaction** | reflex test | wait for green, hit **any key** fast; 3 rounds, avg out of 82 | [REACTION.md](REACTION.md) |
+| **Drop-Merge** | color-2048, 4×13 well | PgUp/PgDn = move · Home = drop · merge same-color boxes | [DROP.md](DROP.md) |
+| **Pong** | 2-player rally to 3 | Left: **`<`** up / **Win** down · Right: **↑** / **↓** | [PONG.md](PONG.md) |
 
 ## Custom keycodes
 | Keycode | Location | Action |
@@ -158,7 +160,7 @@ start/action, **hold ~0.5 s = quit / exit**). Six games:
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores your speed on release |
 | `BLK_TOGG` | layer 3 · < (ISO key left of Z) | block/lock mode on/off — swallow all keys (nothing reaches the PC); **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s red flash + green F1–F4) **without** changing the layer |
-| `ARCADE` | layer 1 · H / layer 3 · H | open the on-keyboard arcade (lobby → Tetris / Topo) |
+| `ARCADE` | layer 1 · H / layer 3 · H | open the on-keyboard arcade (lobby → Tetris / Topo / Flappy / Dino / Memory / Reaction / Drop-Merge / Pong) |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 Custom keycodes show as **"Unknown"** in VIA — don't remap those keys there or you lose the feature.

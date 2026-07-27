@@ -20,7 +20,7 @@ Flash the `.bin` with **QMK Toolbox** on Windows (DFU: switch to *Cable*, hold t
 ## Documentation
 - **[KEYMAP.md](KEYMAP.md)** — layers, custom keys, mouse speed / shape movers, RGB adjust keys, the pinyin IME, and the custom-keycode table.
 - **[IME.md](IME.md)** — the Fn+I pinyin input method: how it works end-to-end, the dictionary, and the code path.
-- **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** / **[FLAPPY.md](FLAPPY.md)** / **[DINO.md](DINO.md)** / **[MEMORY_GAME.md](MEMORY_GAME.md)** / **[REACTION.md](REACTION.md)** — the six on-keyboard arcade games (Fn+H).
+- **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** / **[FLAPPY.md](FLAPPY.md)** / **[DINO.md](DINO.md)** / **[MEMORY_GAME.md](MEMORY_GAME.md)** / **[REACTION.md](REACTION.md)** / **[DROP.md](DROP.md)** / **[PONG.md](PONG.md)** — the eight on-keyboard arcade games (Fn+H).
 - **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–31).
 - **[MEMORY.md](MEMORY.md)** — flash / RAM / EEPROM storage map and the firmware size breakdown.
 
@@ -124,12 +124,12 @@ the arcade owns the whole board and **swallows all keys**. The **knob is the dia
 | **hold ~0.5 s** | quit a game → lobby; hold in the lobby → **exit the arcade** |
 
 In-game the swallowed keys become controls too: **any key = flap** (Flappy), **Space = jump / Ctrl =
-duck** (Dino), press the **lit key** (Topo), **repeat the flashed keys** (Memory), or **hit any key**
-(Reaction).
+duck** (Dino), press the **lit key** (Topo), **repeat the flashed keys** (Memory), **hit any key**
+(Reaction), **PgUp/PgDn move & Home drops** (Drop-Merge), or the **paddle keys** (Pong).
 
 Flow: **lobby** (game name animates letter-by-letter, a 5×5 LED font) → **3× red countdown** → game →
 **score fill** (lights the board top-left → down; bronze / cyan / gold by score; max 82 keys) → knob-tap
-or **10 s idle** returns to the lobby. Six
+or **10 s idle** returns to the lobby. Eight
 games:
 
 | Game | One-liner | Doc |
@@ -140,6 +140,8 @@ games:
 | **Dino** | Space = jump (tap 2 / hold 3), Ctrl = duck | [DINO.md](DINO.md) |
 | **Memory** | Simon on all 82 keys; repeat the flashed sequence | [MEMORY_GAME.md](MEMORY_GAME.md) |
 | **Reaction** | wait for green, hit any key fast; 3 rounds, avg / 82 | [REACTION.md](REACTION.md) |
+| **Drop-Merge** | color-2048 in a 4×13 well; PgUp/PgDn move, Home drops, merge same colors | [DROP.md](DROP.md) |
+| **Pong** | 2-player; `<`/Win vs ↑/↓; 1×2 paddles, first to 3 | [PONG.md](PONG.md) |
 
 ---
 
@@ -155,7 +157,7 @@ games:
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores the prior speed on release |
 | `BLK_TOGG` | layer 3 · < (ISO key left of Z) | block/lock mode — swallow all keys; Fn+< again exits; dim amber wash; **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s flash + green F1–F4) without changing the layer |
-| `ARCADE` | layer 1/3 · H | open the on-keyboard arcade (lobby → Tetris / Topo / Flappy / Dino / Memory / Reaction); knob-hold to exit |
+| `ARCADE` | layer 1/3 · H | open the on-keyboard arcade (lobby → Tetris / Topo / Flappy / Dino / Memory / Reaction / Drop-Merge / Pong); knob-hold to exit |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
 
 ## Files
@@ -166,11 +168,11 @@ Everything lives in **`keymaps/xiangfeng/`**. The custom C sources sit in a **`s
 - `rgb_matrix_user.inc` — registers the custom USER RGB effects
 - **`src/`** — custom C sources:
   - `src/hanzi_data.c` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
-  - `src/arcade.c` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, score)
+  - `src/arcade.c` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, Drop-Merge, Pong, score)
   - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c`, `src/heatmap.c`, `src/audio.c` — custom RGB effects (`src/audio.c` also overrides the `kc_custom_hid_rx` hook to receive the audio companion app's Raw HID stream)
 - **`include/`** — headers: `palette.h` (15 named `COL_*` color constants, the single source of color for the effects/indicators/game palettes), `arcade.h`, `hanzi_data.h`, `tetris.h`
 - `usevia-definition.json`, `launcher-export.json` — VIA / Launcher references
-- docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `FLAPPY.md`, `DINO.md`, `MEMORY_GAME.md`, `REACTION.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
+- docs: this file, `KEYMAP.md`, `IME.md`, `TETRIS.md`, `TOPO.md`, `FLAPPY.md`, `DINO.md`, `MEMORY_GAME.md`, `REACTION.md`, `DROP.md`, `PONG.md`, `LIGHTING_EFFECTS.md`, `MEMORY.md`
 
 Three shared files keep **small in-place patches** (they can't live in a keymap folder):
 - `quantum/mousekey.c` — 3 → 5 speed levels + `mousekey_set_accel_level()` / `mousekey_get_offset()` / `mousekey_get_accel_level()`

@@ -10,3 +10,6 @@ RGB_MATRIX_CUSTOM_USER = yes
 
 # All custom sources kept in this keymap folder.
 SRC += src/hanzi_data.c src/letters.c src/spider_mask.c src/arcade.c src/crab.c src/palette.c src/heatmap.c src/audio.c
+# per-game arcade sources (shared/dispatch stays in src/arcade.c)
+SRC += src/arcade/tetris.c src/arcade/topo.c src/arcade/flappy.c src/arcade/dino.c
+SRC += src/arcade/memory.c src/arcade/reaction.c src/arcade/drop.c src/arcade/pong.c
