@@ -44,7 +44,7 @@ enum custom_keycodes { MS_ACC4 = SAFE_RANGE, MS_ACC5, LT_CLEAR, MS_DVD,
                        IME_TOGG, // pinyin IME on/off (Fn+I)
                        MS_STOP,  // stop any running mouse animation (Win Fn + Space)
                        MS_BOOST, // hold to boost mouse speed to F4/1.0x (Win Fn + LShift)
-                       BLK_TOGG, // block/lock mode on/off (Win Fn + Z) — swallow all keys
+                       BLK_TOGG, // block/lock mode on/off (Win Fn + <, the ISO key left of Z) — swallow all keys
                        LAY_SHOW, // flash the layer meter without changing layer (Win Fn + L)
                        ARCADE }; // open the on-keyboard arcade (Fn + H)
 
@@ -407,7 +407,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         { 0x0001, 0x7E0B, 0x7E0C, 0x7E0D, 0x7E0E, 0x7700, 0x7701, 0x7702, 0x7703, 0x7704, 0x7705, 0x7706, 0x7707, LT_CLEAR, 0x0049 },
         { 0x7820, 0x7821, 0x7827, 0x7823, 0x7825, 0x7829, 0x0001, 0x0001, IME_TOGG, 0x0001, 0x0001, 0x0001, 0x0001, 0x00D1, 0x0001 },
         { 0x0001, 0x7822, 0x7828, 0x7824, 0x7826, 0x782A, ARCADE, 0x0001, 0x0001, LAY_SHOW, 0x0001, 0x0001, 0x0001, 0x004D, 0x0000 },
-        { MS_BOOST, 0x0001, BLK_TOGG, 0x7E11, 0x7E12, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
+        { MS_BOOST, BLK_TOGG, PROF1, PROF2, PROF3, 0x0001, 0x7E0F, 0x7013, 0x0001, 0x0001, 0x0001, 0x0000, 0x0001, 0x0001, 0x00CD },
         { 0x00D4, 0x0001, 0x00D5, 0x0000, 0x0000, 0x0000, MS_STOP, 0x0000, 0x0000, 0x00D2, 0x0001, 0x0001, 0x00CF, 0x00CE, 0x00D0 },
     },
 };
@@ -501,7 +501,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case MS_SH9: if (record->event.pressed) shp_toggle(SHP_SPIRAL); return false; // 9  spiral
         case MS_SH0: if (record->event.pressed) shp_toggle(SHP_LISS);   return false; // 0  lissajous
         case MS_DVD:  if (record->event.pressed) dvd_toggle();  return false; // F9: full-screen DVD bounce
-        case BLK_TOGG: // Win Fn (layer 3) Z: enter block/lock mode (Fn+Z again exits); persists across power-off
+        case BLK_TOGG: // Win Fn (layer 3) < (ISO key left of Z): enter block/lock mode (Fn+< again exits); persists across power-off
             if (record->event.pressed) set_locked(true);
             return false;
         case LAY_SHOW: // Win Fn (layer 3) L: flash the layer meter WITHOUT changing the layer

@@ -113,10 +113,15 @@ Mac base = F1, Mac Fn = F1–F2, Win base = F1–F3, Win Fn = F1–F4. Both clea
 green is **not** persistent). **Fn + L** (`LAY_SHOW`) fires the same flash any time to *peek* the
 layer without switching — tap and release Fn to read your base (Mac = 1 key, Win = 3). Separate from the RGB min/max **blink** and the hue-0 **blackout**.
 
-## Block / lock mode — Fn + Z
-**layer 3 · Z** (`BLK_TOGG`) toggles a mode where **every keypress is swallowed** — nothing reaches the
-PC (handy for wiping the board down). **Fn still works**, so **Fn + Z** again exits. While locked the
+## Block / lock mode — Fn + <
+**layer 3 · <** (`BLK_TOGG`, the ISO key left of Z) toggles a mode where **every keypress is swallowed** — nothing reaches the
+PC (handy for wiping the board down). **Fn still works**, so **Fn + <** again exits. While locked the
 board shows a **dim amber wash** so the state is obvious.
+
+## Switch HE profile — Fn + Z / X / C
+The **Z X C** keys on **layer 3** are Keychron's built-in HE-profile-select keycodes:
+**Z = `PROF1`** (Profile 1, index 0 = Regular / typing), **X = `PROF2`** (Profile 2, Rapid Trigger /
+gaming), **C = `PROF3`** (Profile 3). One tap jumps straight to that profile.
 
 ## Arcade — Fn + H
 **layer 1 · H / layer 3 · H** (`ARCADE`) opens a tiny arcade on the RGB grid. While open it **owns the
@@ -151,7 +156,7 @@ start/action, **hold ~0.5 s = quit / exit**). Six games:
 | `IME_TOGG` | layer 1 · I / layer 3 · I | toggle the pinyin IME (Fn+I) |
 | `MS_STOP` | layer 1 · Space **&** layer 3 · Space | stop any running mouse animation (shape / DVD bounce / IME draw) |
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores your speed on release |
-| `BLK_TOGG` | layer 3 · Z | block/lock mode on/off — swallow all keys (nothing reaches the PC); **persists across power-off** |
+| `BLK_TOGG` | layer 3 · < (ISO key left of Z) | block/lock mode on/off — swallow all keys (nothing reaches the PC); **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s red flash + green F1–F4) **without** changing the layer |
 | `ARCADE` | layer 1 · H / layer 3 · H | open the on-keyboard arcade (lobby → Tetris / Topo) |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |

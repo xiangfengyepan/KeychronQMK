@@ -34,6 +34,7 @@ static uint8_t cr_body_r, cr_body_g, cr_body_b;                  // shell, from 
 static uint8_t cr_eye_r, cr_eye_g, cr_eye_b;                     // eyes,  from COL_RED
 static uint8_t cr_np = 0;
 static bool    cr_ready = false;
+static bool    cr_bottom[RGB_MATRIX_LED_COUNT]; // space-bar / bottom row -> kept dark (crab is painted rows 0-4)
 static float   cr_x, cr_y, cr_tx, cr_ty, cr_walk;
 static uint32_t cr_cel = 0, cr_last = 0;
 static float   cr_minx, cr_maxx, cr_miny, cr_maxy, cr_hw, cr_hh;
@@ -76,6 +77,10 @@ static void cr_build(void) {
         if (fabsf(cr_part[j].dy) > cr_hh) cr_hh = fabsf(cr_part[j].dy);
     }
     cr_hw += 6; cr_hh += 6;
+    for (uint8_t c = 0; c < MATRIX_COLS; c++) {             // the crab never lights the bottom (space-bar) row
+        uint8_t led = g_led_config.matrix_co[MATRIX_ROWS - 1][c];
+        if (led != NO_LED) cr_bottom[led] = true;
+    }
     cr_x = (cr_minx + cr_maxx) / 2; cr_y = (cr_miny + cr_maxy) / 2;
     RGB o = hsv_to_rgb((HSV)COL_ORANGE); cr_body_r = o.r; cr_body_g = o.g; cr_body_b = o.b; // shell
     RGB e = hsv_to_rgb((HSV)COL_RED);    cr_eye_r  = e.r; cr_eye_g  = e.g; cr_eye_b  = e.b; // eyes
@@ -122,6 +127,7 @@ bool crab_effect(effect_params_t *params) {
 
     for (uint8_t i = led_min; i < led_max; i++) {
         RGB_MATRIX_TEST_LED_FLAGS();
+        if (cr_bottom[i]) { rgb_matrix_set_color(i, 0, 0, 0); continue; } // keep the space-bar row dark
         float lx = g_led_config.point[i].x, ly = g_led_config.point[i].y;
         float bd = 1e9f; uint8_t bp = 255;
         for (uint8_t p = 0; p < cr_np; p++) { float ex = lx - cr_px[p], ey = ly - cr_py[p]; float d = ex * ex + ey * ey; if (d < bd) { bd = d; bp = p; } }

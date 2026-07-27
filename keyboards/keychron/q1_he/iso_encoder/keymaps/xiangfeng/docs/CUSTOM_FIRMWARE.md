@@ -95,7 +95,7 @@ Actuation/sensitivity units = 0.1 mm; travel range 0.5–4.0 mm.
 | Profile 2 | 1 | Rapid Trigger | 1.2 mm | 0.2 mm | Valorant / gaming |
 | Profile 3 | 2 | (unchanged) | — | — | Xbox gamepad mapping |
 
-> These apply on an EEPROM/profile reset. **SOCD** (last-input wins on **A↔D** and **W↔S**) is baked into the gaming profile for clean counter-strafing. ⚠️ Snap-Tap-style SOCD is **banned in some titles** (CS2); Valorant hasn't explicitly banned it but Vanguard could treat it as a ToS violation — **account risk**. Per-key HE calibration stays per-unit (auto-calibrates).
+> These apply on an EEPROM/profile reset. **Quick-switch keys** on layer 3 (Windows Fn): **Z** = `PROF1` (Profile 1, Regular), **X** = `PROF2` (Profile 2, Rapid Trigger), **C** = `PROF3` (Profile 3). **SOCD** (last-input wins on **A↔D** and **W↔S**) is baked into the gaming profile for clean counter-strafing. ⚠️ Snap-Tap-style SOCD is **banned in some titles** (CS2); Valorant hasn't explicitly banned it but Vanguard could treat it as a ToS violation — **account risk**. Per-key HE calibration stays per-unit (auto-calibrates).
 
 ## 6. Power-management timeouts (baked defaults)
 In this folder's `config.h` (seconds):
@@ -151,7 +151,7 @@ games:
 | `IME_TOGG` | layer 1/3 · I | toggle pinyin IME — type pinyin, cycle candidates (←/→ or Tab, or 1–9), Space/Enter confirms → draws the character with the mouse. 276-char baked dictionary — 12 common chars per pinyin initial (`src/hanzi_data.c`). |
 | `MS_STOP` | layer 1 · Space **and** layer 3 · Space | stop any running mouse animation (shape mover / DVD bounce / IME draw); releases the button if mid-stroke |
 | `MS_BOOST` | layer 3 · LShift | **hold** to boost mouse speed to 1.0×; restores the prior speed on release |
-| `BLK_TOGG` | layer 3 · Z | block/lock mode — swallow all keys; Fn+Z again exits; dim amber wash; **persists across power-off** |
+| `BLK_TOGG` | layer 3 · < (ISO key left of Z) | block/lock mode — swallow all keys; Fn+< again exits; dim amber wash; **persists across power-off** |
 | `LAY_SHOW` | layer 1 · L / layer 3 · L | peek the layer meter (1 s flash + green F1–F4) without changing the layer |
 | `ARCADE` | layer 1/3 · H | open the on-keyboard arcade (lobby → Tetris / Topo / Flappy / Dino / Memory / Reaction); knob-hold to exit |
 | `LT_CLEAR` | layer 3 · Backspace | clear the letter/marquee buffer |
