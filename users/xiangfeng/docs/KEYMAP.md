@@ -179,4 +179,4 @@ Custom keycodes show as **"Unknown"** in VIA — don't remap those keys there or
 - **`~` = `_______`** (transparent) — restored to the Keychron default.
 
 ## Build & flash
-See [CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md).
+See [Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md).

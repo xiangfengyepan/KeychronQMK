@@ -3,9 +3,15 @@
 Custom build on top of the SRGBmods/Keychron QMK fork.
 **Board:** `keychron/q1_he/iso_encoder` · **Keymap:** `xiangfeng` (VIA-enabled) · **device_version:** 1.2.1
 
-The **entire custom build lives in this one keymap folder**
-(`keyboards/keychron/q1_he/iso_encoder/keymaps/xiangfeng/`) — keymap, config, custom RGB
-effects, the IME dictionary and these docs. Only three shared files keep small in-place patches
+> **Reusable modules** (custom RGB effects, arcade, pinyin IME, RGB-adjust feedback, mouse engine,
+> helpers) now live in the shared QMK userspace **`users/xiangfeng/`** — see the
+> **[README](../README.md)** for what's portable to other keyboards (it's the same code that runs the
+> Monsgeek M1 V5). **This doc covers the Q1 HE-specific build**: the baked keymap, HE profiles,
+> mouse-speed keys, power timeouts, VIA definition, and flashing.
+
+The keymap folder (`keyboards/keychron/q1_he/iso_encoder/keymaps/xiangfeng/`) holds only the
+board-specific glue — `keymap.c`, `config.h`, `rgb_matrix_user.inc`. The reusable `src/` + `include/`
++ these `docs/` live in the userspace. Three shared files keep small in-place patches
 (`quantum/mousekey.c`, `common/analog_matrix/profile.c`, `common/keychron_raw_hid.c`; see *Files* below).
 
 Build:

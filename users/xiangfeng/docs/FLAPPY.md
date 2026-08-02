@@ -45,4 +45,4 @@ A gentle fall (~0.6 s floor-to-floor) that a tap keeps aloft.
 - `1600` respawn ms, `0.05f` start speed, `0.000012f` ramp — pacing.
 - Fill target `score / 20` in `game_over`.
 
-See **[DINO.md](DINO.md)** and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the arcade shell.
+See **[DINO.md](DINO.md)** and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for the arcade shell.

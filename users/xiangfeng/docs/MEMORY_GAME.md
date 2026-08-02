@@ -44,4 +44,4 @@ Presses are ignored except during stage 1, so mashing keys while the sequence pl
 - `1 − expf(-rounds/6)` in `game_over` — the score-fill curve.
 
 See **[TETRIS.md](TETRIS.md)**, **[TOPO.md](TOPO.md)**, **[FLAPPY.md](FLAPPY.md)**, **[DINO.md](DINO.md)**
-and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the arcade shell.
+and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for the arcade shell.

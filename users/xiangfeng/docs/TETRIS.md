@@ -72,5 +72,5 @@ Cleared lines shift the stack toward the floor and **gravity speeds up** (−18 
 - `KICK[]` — wall-kick offsets.
 - Fill target `score / 15` in `game_over`.
 
-See **[TOPO.md](TOPO.md)** for the other game and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the
+See **[TOPO.md](TOPO.md)** for the other game and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for the
 arcade shell (lobby / countdown / score).

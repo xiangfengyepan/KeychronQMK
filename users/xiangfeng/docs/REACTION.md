@@ -46,4 +46,4 @@ sliver). Some points: 120 ms → 62, 150 ms → 32, 170 ms → 12. Colored by th
 - Round count `3` in `react_press`; green/red colors in `react_render`.
 
 See **[TETRIS.md](TETRIS.md)**, **[TOPO.md](TOPO.md)**, **[FLAPPY.md](FLAPPY.md)**, **[DINO.md](DINO.md)**,
-**[MEMORY_GAME.md](MEMORY_GAME.md)** and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the arcade shell.
+**[MEMORY_GAME.md](MEMORY_GAME.md)** and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for the arcade shell.

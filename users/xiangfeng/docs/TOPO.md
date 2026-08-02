@@ -50,5 +50,5 @@ death, surviving means keeping an increasingly crowded board clear.
 - `1 + topo_score/10`, cap `TOPO_MAX` (8) — max simultaneous moles.
 - `1 − expf(-score/32)` in `game_over` — the score-fill curve.
 
-See **[TETRIS.md](TETRIS.md)** for the other game and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for
+See **[TETRIS.md](TETRIS.md)** for the other game and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for
 the arcade shell.

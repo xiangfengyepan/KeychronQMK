@@ -47,5 +47,5 @@ p_rd`, stepped in `pong_tick`). **Knob hold (~0.5 s) quits to the lobby.**
 - Paddle speed `pv = 0.14 * s` in `pong_tick`.
 - `LPIP[] / RPIP[]` — which row-5 keys the score pips use.
 
-See **[DROP.md](DROP.md)** for the other new game and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the
+See **[DROP.md](DROP.md)** for the other new game and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for the
 arcade shell (lobby / countdown / score).

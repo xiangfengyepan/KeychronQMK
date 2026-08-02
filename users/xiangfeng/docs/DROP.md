@@ -72,5 +72,5 @@ pool are at **full brightness**; locked higher tiers are **dimmed to ~22 %**. Dr
 - The legend dim factor (`* 22 / 100`) in `drop_render`.
 - Fill target `tier / 8` (case 6) in `game_over`.
 
-See **[PONG.md](PONG.md)** for the other new game and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the
+See **[PONG.md](PONG.md)** for the other new game and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for the
 arcade shell (lobby / countdown / score).

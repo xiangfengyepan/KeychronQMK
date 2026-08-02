@@ -52,4 +52,4 @@ Frame-rate independent (`s = dt / 16.67`):
 - `rnd()%5 < 2` top-obstacle chance; `850 + rnd()%450` respawn ms; `0.06f` start speed.
 - Fill target `score / 25` in `game_over`.
 
-See **[FLAPPY.md](FLAPPY.md)** and **[CUSTOM_FIRMWARE.md](CUSTOM_FIRMWARE.md)** for the arcade shell.
+See **[FLAPPY.md](FLAPPY.md)** and **[Q1_HE_CUSTOM_FIRMWARE.md](Q1_HE_CUSTOM_FIRMWARE.md)** for the arcade shell.
