@@ -26,7 +26,7 @@ Flash the `.bin` with **QMK Toolbox** on Windows (DFU: switch to *Cable*, hold t
 ## Documentation
 - **[KEYMAP.md](KEYMAP.md)** — layers, custom keys, mouse speed / shape movers, RGB adjust keys, the pinyin IME, and the custom-keycode table.
 - **[IME.md](IME.md)** — the Fn+I pinyin input method: how it works end-to-end, the dictionary, and the code path.
-- **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** / **[FLAPPY.md](FLAPPY.md)** / **[DINO.md](DINO.md)** / **[MEMORY_GAME.md](MEMORY_GAME.md)** / **[REACTION.md](REACTION.md)** / **[DROP.md](DROP.md)** / **[PONG.md](PONG.md)** — the eight on-keyboard arcade games (Fn+H).
+- **[TETRIS.md](TETRIS.md)** / **[TOPO.md](TOPO.md)** / **[FLAPPY.md](FLAPPY.md)** / **[DINO.md](DINO.md)** / **[MEMORY_GAME.md](MEMORY_GAME.md)** / **[REACTION.md](REACTION.md)** / **[DROP.md](DROP.md)** / **[PONG.md](PONG.md)** / **[RUBIK.md](RUBIK.md)** — the nine on-keyboard arcade games (Fn+H).
 - **[LIGHTING_EFFECTS.md](LIGHTING_EFFECTS.md)** — the full RGB effect list and cycle order (including the custom effects 25–31).
 - **[MEMORY.md](MEMORY.md)** — flash / RAM / EEPROM storage map and the firmware size breakdown.
 
@@ -131,11 +131,12 @@ the arcade owns the whole board and **swallows all keys**. The **knob is the dia
 
 In-game the swallowed keys become controls too: **any key = flap** (Flappy), **Space = jump / Ctrl =
 duck** (Dino), press the **lit key** (Topo), **repeat the flashed keys** (Memory), **hit any key**
-(Reaction), **PgUp/PgDn move & Home drops** (Drop-Merge), or the **paddle keys** (Pong).
+(Reaction), **PgUp/PgDn move & Home drops** (Drop-Merge), the **paddle keys** (Pong), or **Space**
+(Rubik — hold ≥3 s for the timer, tap for a scramble).
 
 Flow: **lobby** (game name animates letter-by-letter, a 5×5 LED font) → **3× red countdown** → game →
 **score fill** (lights the board top-left → down; bronze / cyan / gold by score; max 82 keys) → knob-tap
-or **10 s idle** returns to the lobby. Eight
+or **10 s idle** returns to the lobby. Nine
 games:
 
 | Game | One-liner | Doc |
@@ -148,6 +149,7 @@ games:
 | **Reaction** | wait for green, hit any key fast; 3 rounds, avg / 82 | [REACTION.md](REACTION.md) |
 | **Drop-Merge** | color-2048 in a 4×13 well; PgUp/PgDn move, Home drops, merge same colors | [DROP.md](DROP.md) |
 | **Pong** | 2-player; `<`/Win vs ↑/↓; 1×2 paddles, first to 3 | [PONG.md](PONG.md) |
+| **Rubik** | cube timer/scramble via Space; binary count-up on `1`…`0`, 20-move scramble, 6-face colour readout | [RUBIK.md](RUBIK.md) |
 
 ---
 

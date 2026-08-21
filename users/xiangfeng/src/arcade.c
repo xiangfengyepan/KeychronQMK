@@ -38,7 +38,7 @@ static bool     knob_down = false, knob_held = false;
 static uint16_t knob_t = 0;
 
 /* ---- games + 5x5 LED font (for the lobby name animation) ---- */
-typedef struct { const char *name; HSV col; uint8_t kind; } game_t; // kind 0=tetris 1=topo 2=flappy 3=dino 4=memory 5=react 6=drop 7=pong
+typedef struct { const char *name; HSV col; uint8_t kind; } game_t; // kind 0=tetris 1=topo 2=flappy 3=dino 4=memory 5=react 6=drop 7=pong 8=rubik
 static const game_t GAMES[] = {                     // accent color = nearest palette constant
     {"TETRIS", COL_CYAN,        0},
     {"TOPO",   COL_PINK,        1},
@@ -48,11 +48,12 @@ static const game_t GAMES[] = {                     // accent color = nearest pa
     {"REACT",  COL_CORAL,       5},
     {"DROP",   COL_LIME,        6},
     {"PONG",   COL_CYAN,        7},
+    {"RUBIK",  COL_WHITE,       8},
 };
 #define NGAME (sizeof(GAMES) / sizeof(GAMES[0]))
 static uint8_t sel = 0;
 
-static const uint8_t FONT[16][5] = {
+static const uint8_t FONT[19][5] = {
     {0x1F, 0x04, 0x04, 0x04, 0x04}, // 0  T
     {0x1F, 0x10, 0x1E, 0x10, 0x1F}, // 1  E
     {0x1E, 0x12, 0x1E, 0x14, 0x13}, // 2  R
@@ -69,12 +70,16 @@ static const uint8_t FONT[16][5] = {
     {0x11, 0x1B, 0x15, 0x11, 0x11}, // 13 M
     {0x0E, 0x11, 0x10, 0x11, 0x0E}, // 14 C
     {0x0F, 0x10, 0x13, 0x11, 0x0E}, // 15 G
+    {0x11, 0x11, 0x11, 0x11, 0x0E}, // 16 U
+    {0x1E, 0x11, 0x1E, 0x11, 0x1E}, // 17 B
+    {0x11, 0x12, 0x1C, 0x12, 0x11}, // 18 K
 };
 static int8_t gidx(char c) {
     switch (c) { case 'T': return 0; case 'E': return 1; case 'R': return 2;  case 'I': return 3;
                  case 'S': return 4; case 'O': return 5; case 'P': return 6;  case 'F': return 7;
                  case 'L': return 8; case 'A': return 9; case 'Y': return 10; case 'D': return 11;
-                 case 'N': return 12; case 'M': return 13; case 'C': return 14; case 'G': return 15; }
+                 case 'N': return 12; case 'M': return 13; case 'C': return 14; case 'G': return 15;
+                 case 'U': return 16; case 'B': return 17; case 'K': return 18; }
     return -1;
 }
 static void draw_glyph(char c, uint8_t R, uint8_t G, uint8_t B) {
@@ -147,7 +152,8 @@ static void start_game(void) {
         case 4:  memory_start(); break;
         case 5:  react_start();  break;
         case 6:  drop_start();   break;
-        default: pong_start();   break;
+        case 7:  pong_start();   break;
+        default: rubik_start();  break;
     }
 }
 
@@ -181,6 +187,7 @@ void arcade_key(uint8_t row, uint8_t col, bool pressed) {
         pong_key(row, col, pressed);
         return;
     }
+    if (st == A_RUBIK) { rubik_key(row, col, pressed); return; } // Space hold/tap (needs release)
     if (!pressed) return;
     if (st == A_TETRIS) {
         if      (row == 1 && col == 14) tmove(-1);     // PgUp
@@ -210,6 +217,7 @@ void arcade_tick(void) {
         case A_REACT:  react_tick();  break;
         case A_DROP:   drop_tick();   break;
         case A_PONG:   pong_tick();   break;
+        case A_RUBIK:  rubik_tick();  break;
         case A_SCORE:  if (timer_elapsed32(sc_t) >= 10000) enter_lobby(); break; // idle 10s -> lobby
         default: break;
     }
@@ -227,6 +235,7 @@ void arcade_render(uint8_t led_min, uint8_t led_max) {
         case A_REACT:  react_render();  break;
         case A_DROP:   drop_render();   break;
         case A_PONG:   pong_render();   break;
+        case A_RUBIK:  rubik_render();  break;
         case A_SCORE:  sc_render();     break;
         default: break;
     }

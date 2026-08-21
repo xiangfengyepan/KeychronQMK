@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 /* ---- state machine (owned by arcade.c; games set `st` to their own state) ---- */
-enum { A_OFF, A_LOBBY, A_COUNT, A_TETRIS, A_TOPO, A_FLAPPY, A_DINO, A_MEMORY, A_REACT, A_DROP, A_PONG, A_SCORE };
+enum { A_OFF, A_LOBBY, A_COUNT, A_TETRIS, A_TOPO, A_FLAPPY, A_DINO, A_MEMORY, A_REACT, A_DROP, A_PONG, A_RUBIK, A_SCORE };
 extern uint8_t st;
 
 /* ---- shared RNG (defined in arcade.c) ---- */
@@ -75,3 +75,8 @@ void pong_start(void);
 void pong_tick(void);
 void pong_render(void);
 void pong_key(uint8_t row, uint8_t col, bool pressed);
+/* Rubik */
+void rubik_start(void);
+void rubik_tick(void);
+void rubik_render(void);
+void rubik_key(uint8_t row, uint8_t col, bool pressed);
