@@ -27,6 +27,7 @@ extern uint8_t analog_matrix_get_travel(uint8_t row, uint8_t col); // live per-k
 #define PN_DECAY_MS    700.0f  // full-scale fall time on release (slow EQ decay)
 #define PN_BANDH       0.20f   // height (in 0..1) of one key row's band, for the tip
 #define PN_DEADZONE    0.04f   // travel below this reads as "not pressed"
+#define PN_ROWH        0.12f   // ~half a key-row in normalized height: lets the bar reach the top (F) row (whose hfrac is exactly 1.0) on a firm press
 
 static float    pn_level[PN_NCOLS]; // current bar height per column, 0..1
 static uint32_t pn_last  = 0;
@@ -102,9 +103,10 @@ bool piano_effect(effect_params_t *params) {
         float   hfrac = (pn_maxy - ly) / spany; // 0 at the bottom row .. 1 at the top row
 
         uint8_t rr = 0, gg = 0, bb = 0;
-        if (level > hfrac + 0.001f) {                       // this key is under the bar's top
+        if (level > hfrac - PN_ROWH) {                      // bar has reached this key's row (top/F row reachable near full press)
             float fill = (level - hfrac) / PN_BANDH;         // how far the bar reaches past this key's row
             if (fill > 1.0f) fill = 1.0f;
+            if (fill < 0.0f) fill = 0.0f;
             bool  tip    = fill < 0.985f;                    // partially-filled top row = leading edge
             float bright = tip ? (0.55f + 0.45f * fill)      // tip pops brightest
                                : (0.42f + 0.22f * hfrac);    // body grades brighter upward
