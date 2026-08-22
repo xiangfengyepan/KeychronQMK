@@ -30,7 +30,7 @@ Pulled straight from the compiled ELF (`arm-none-eabi-size`):
 So of the 256 KB: **~217 KB is the flashed image**, **~12 KB** is the emulated-EEPROM slice, leaving
 **~27 KB free**. The dictionary (`.rodata`, ~56 KB for 276 characters) is the biggest single thing *you*
 added; the arcade added ~6 KB of code across its six games (Tetris, Topo, Flappy, Dino, Memory, Reaction),
-and the five custom RGB effects (letters ×2, Spider-Man, crab, palette) another few KB.
+and the custom RGB effects (letters ×2, Spider-Man, palette, heatmap, audio) another few KB. (The Claude crab effect was later dropped.)
 
 ## The memory stack (address map, with KB used)
 
