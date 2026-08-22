@@ -4,15 +4,20 @@
  *   A. TIMER    — hold Space >=3 s (the number row fills amber, then breathes
  *                 green = "ready, release any time"); release starts a count-up
  *                 clock shown in BINARY on the number row (key '1'=512 ... '0'=1,
- *                 0-1023 s). Press Space again to stop and hold the time lit.
+ *                 0-1023 s) in amber. Press Space again to stop: the frozen time
+ *                 stays lit but recoloured GREEN to mark it stopped.
  *   B. SCRAMBLE — a quick Space tap (<3 s) shows a 20-move WCA scramble, one move
- *                 every 2 s: the face key (R L U D B F) lit amber, plus '2' (blue)
- *                 for a double and ' (pink) for a prime — up to three keys at once.
+ *                 every 1 s: the face key (R L U D B F) lit amber, plus '2' (blue)
+ *                 for a double and ' (pink, the KC_MINS number-row key) for a prime
+ *                 — up to three keys at once. Press Space during the scramble to
+ *                 stop and reset it (back to idle; no colour readout).
  *   C. COLOURS  — after the last move, the scrambled cube is drawn: each keyboard
  *                 row is one face (9 stickers on 9 keys). F-row=F(green) number=U
  *                 (white) QWERTY=D(yellow) home=L(orange) shift=R(red) bottom(9
  *                 non-Space keys)=B(blue).
- * From STOP or COLOURS a Space press starts over (hold->timer, tap->scramble).
+ * From any shown result (a stopped timer, a stopped scramble, or the colour
+ * readout) a Space press resets back to idle; from idle, hold Space -> timer,
+ * a quick tap -> scramble.
  * Knob-hold exits to the lobby (handled by the hub). */
 #include "quantum.h"
 #include "rgb_matrix.h"
@@ -21,7 +26,7 @@
 
 #define HOLD_MS 3000   // hold Space at least this long to arm the timer
 #define NMOVES  20     // WCA scramble length
-#define MOVE_MS 2000   // per-move display time
+#define MOVE_MS 1000   // per-move display time
 
 /* ---- cube state: 6 faces x 9 stickers, each holding a face index 0..5 ---- */
 enum { FU, FD, FF, FB, FL, FR };          // face order == keyboard-row order (top->bottom)
@@ -85,7 +90,7 @@ static void gen_scramble(void) {
 static uint8_t rowsR[6][9], rowsC[6][9];   // colour display: one face per keyboard row
 static uint8_t nbR[10],  nbC[10];          // number row 1..9,0  (bit9..bit0)
 static uint8_t faceR[6], faceC[6];         // scramble face keys U D F B L R
-static uint8_t primeR, primeC, dblR, dblC; // ' and 2
+static uint8_t primeR, primeC, dblR, dblC; // ' (KC_MINS, number row) and 2
 static uint8_t spcR, spcC;                 // the Space bar
 
 /* Resolve a key's physical (row,col) from its keycode. Scans the first few layers
@@ -116,7 +121,7 @@ static void build_positions(void) {
     }
     pos_of(KC_0, &nbR[9], &nbC[9]);                      // timer bit 0 = '0' key
     for (uint8_t i = 0; i < 6; i++) pos_of(FK[i], &faceR[i], &faceC[i]);
-    pos_of(KC_QUOT, &primeR, &primeC);
+    pos_of(KC_MINS, &primeR, &primeC);   // prime ' = the number-row key right of 0 (KC_MINS)
     pos_of(KC_2,    &dblR,   &dblC);
     pos_of(KC_SPC,  &spcR,   &spcC);
     // R row = the 9 non-Space keys on the bottom (Space) matrix row, left->right
@@ -145,8 +150,9 @@ void rubik_start(void) { build_positions(); solve(); rb = RB_IDLE; space_down = 
 void rubik_key(uint8_t row, uint8_t col, bool pressed) {
     if (row != spcR || col != spcC) return;              // only the Space bar drives the game
     if (pressed) {
-        if (rb == RB_TIMER) { timer_frozen = cur_seconds(); rb = RB_STOP; return; } // running -> stop
-        rb = RB_HOLD; space_down = true; space_t = timer_read32();                  // begin arming
+        if (rb == RB_TIMER) { timer_frozen = cur_seconds(); rb = RB_STOP; return; }   // running timer -> stop
+        if (rb == RB_STOP || rb == RB_SCRAMBLE || rb == RB_COLORS) { rb = RB_IDLE; return; } // any shown result -> reset to idle
+        rb = RB_HOLD; space_down = true; space_t = timer_read32();                     // begin arming (from idle)
     } else if (space_down) {
         space_down = false;
         if (timer_elapsed32(space_t) >= HOLD_MS) { rb = RB_TIMER; timer_t0 = timer_read32(); } // armed -> timer
@@ -160,10 +166,10 @@ void rubik_tick(void) {
     }
 }
 
-static void show_binary(uint16_t v) {
+static void show_binary(uint16_t v, uint8_t r, uint8_t g, uint8_t bl) {
     for (uint8_t b = 0; b < 10; b++) {
-        if ((v >> (9 - b)) & 1) px(nbR[b], nbC[b], 224, 184, 58); // set bit = amber
-        else                    px(nbR[b], nbC[b], 14, 11, 4);    // clear bit = very dim
+        if ((v >> (9 - b)) & 1) px(nbR[b], nbC[b], r, g, bl);    // set bit = given colour
+        else                    px(nbR[b], nbC[b], 14, 11, 4);   // clear bit = very dim
     }
 }
 
@@ -186,8 +192,8 @@ void rubik_render(void) {
             }
             break;
         }
-        case RB_TIMER: show_binary(cur_seconds()); break;
-        case RB_STOP:  show_binary(timer_frozen);  break;
+        case RB_TIMER: show_binary(cur_seconds(), 224, 184, 58); break; // running = amber
+        case RB_STOP:  show_binary(timer_frozen,   0, 196, 90); break; // stopped = green
         case RB_SCRAMBLE: {
             if (mi >= NMOVES) break;
             uint8_t m = mv_face[mi], ty = mv_type[mi];

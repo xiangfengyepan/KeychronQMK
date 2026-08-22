@@ -19,15 +19,18 @@ entirely by Space press/release:
   time"), so you never have to guess when to let go.
 - **Release** (after arming) starts a **count-up clock**, shown in **binary on the number row**: key
   **`1` = bit 9 (512)** … **`0` = bit 0 (1)**, so 0–1023 s. Set bits are amber, clear bits very dim.
-- Press **Space again** to **stop**; the time freezes and stays lit (`RB_STOP`).
+- Press **Space again** to **stop**; the time freezes and stays lit, **recoloured green** to mark it
+  stopped (`RB_STOP`; the live count-up is amber).
 - All timing is `uint32_t` (`timer_read32` / `timer_elapsed32`) — no 16-bit wrap.
 
 ### B. Scramble  (quick Space tap, < 3 s)
 - A tap generates a **20-move WCA scramble** (`NMOVES = 20`), no two consecutive moves on the same face.
-- Moves play **one every 2 s** (`MOVE_MS = 2000`): the **face key** (`R L U D B F`) lights **amber**,
-  plus **`2`** (blue) for a double and **`'`** (`KC_QUOT`, pink) for a prime — **up to three keys at
-  once**. Standard WCA scrambles only ever mark one of `'`/`2`, so in practice you'll see 1–2 keys.
-- After the last move it flows straight into the colours.
+- Moves play **one every 1 s** (`MOVE_MS = 1000`): the **face key** (`R L U D B F`) lights **amber**,
+  plus **`2`** (blue) for a double and the **`'`** key (pink — the **number-row `'`**, `KC_MINS`, not the
+  `´` key by Enter) for a prime — **up to three keys at once**. Standard WCA scrambles only ever mark
+  one of `'`/`2`, so in practice you'll see 1–2 keys.
+- After the last move it flows straight into the colours; press **Space during the scramble** to stop it
+  early and jump straight to the colour readout.
 
 ### C. Colours  (the scrambled cube)
 Each **keyboard row is one cube face**, its 9 stickers on 9 keys (3×3 read left→right, top→bottom).
@@ -58,7 +61,7 @@ keycode is mapped, so the first match wins. The **B face** (bottom row) is the 9
 Space matrix row, left→right, skipping the wide-spacebar `KC_NO` gaps.
 
 ## Tuning (in `src/arcade/rubik.c`)
-- `HOLD_MS` (3000) — Space hold to arm the timer; `NMOVES` (20) — scramble length; `MOVE_MS` (2000) —
+- `HOLD_MS` (3000) — Space hold to arm the timer; `NMOVES` (20) — scramble length; `MOVE_MS` (1000) —
   per-move display time.
 - `COL[6][3]` — the six sticker colours; `ROW_FACE[6]` — which face each physical row shows.
 - Timer bit order in `show_binary` (`1`=MSB … `0`=LSB); the amber/blue/pink move colours in `rubik_render`.
