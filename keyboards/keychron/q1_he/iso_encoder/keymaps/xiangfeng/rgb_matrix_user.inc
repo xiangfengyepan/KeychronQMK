@@ -10,6 +10,7 @@ RGB_MATRIX_EFFECT(SPIDER_MASK)
 RGB_MATRIX_EFFECT(PALETTE)
 RGB_MATRIX_EFFECT(HEATMAP)
 RGB_MATRIX_EFFECT(AUDIO)
+RGB_MATRIX_EFFECT(PIANO)
 
 #ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 
@@ -41,6 +42,11 @@ bool HEATMAP(effect_params_t *params) {
 bool AUDIO(effect_params_t *params) {
     extern bool audio_effect(effect_params_t * params);
     return audio_effect(params);
+}
+
+bool PIANO(effect_params_t *params) {
+    extern bool piano_effect(effect_params_t * params);
+    return piano_effect(params);
 }
 
 #endif
