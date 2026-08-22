@@ -13,3 +13,4 @@ SRC += src/ime/ime.c src/ime/hanzi_data.c
 SRC += src/arcade/tetris.c src/arcade/topo.c src/arcade/flappy.c src/arcade/dino.c
 SRC += src/arcade/memory.c src/arcade/reaction.c src/arcade/drop.c src/arcade/pong.c
 SRC += src/arcade/rubik.c
+SRC += src/arcade/snake.c

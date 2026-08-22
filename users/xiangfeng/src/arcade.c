@@ -38,7 +38,7 @@ static bool     knob_down = false, knob_held = false;
 static uint16_t knob_t = 0;
 
 /* ---- games + 5x5 LED font (for the lobby name animation) ---- */
-typedef struct { const char *name; HSV col; uint8_t kind; } game_t; // kind 0=tetris 1=topo 2=flappy 3=dino 4=memory 5=react 6=drop 7=pong 8=rubik
+typedef struct { const char *name; HSV col; uint8_t kind; } game_t; // kind 0=tetris 1=topo 2=flappy 3=dino 4=memory 5=react 6=drop 7=pong 8=rubik 9=snake
 static const game_t GAMES[] = {                     // accent color = nearest palette constant
     {"TETRIS", COL_CYAN,        0},
     {"TOPO",   COL_PINK,        1},
@@ -49,6 +49,7 @@ static const game_t GAMES[] = {                     // accent color = nearest pa
     {"DROP",   COL_LIME,        6},
     {"PONG",   COL_CYAN,        7},
     {"RUBIK",  COL_WHITE,       8},
+    {"SNAKE",  COL_GREEN,       9},
 };
 #define NGAME (sizeof(GAMES) / sizeof(GAMES[0]))
 static uint8_t sel = 0;
@@ -123,6 +124,7 @@ void game_over(uint16_t score, uint8_t kind) {
         case 4:  f = 1.0f - expf(-(float)score / 6.0f);  break; // memory: saturating (rounds)
         case 5:  f = (182.0f - (float)score) / 82.0f;    break; // react: 100ms=82/82, 182ms=0 — exactly 1 key per ms (score = avg ms)
         case 6:  f = (float)score / 8.0f;                break; // drop:   score = top tier reached (0-8); tier 8 fills
+        case 9:  f = (float)score / 40.0f;               break; // snake:  score = apples eaten; 40 fills the board
         default: f = (float)score / 15.0f;               break; // tetris: 15 lines fills
     }
     if (f > 1) f = 1;
@@ -153,7 +155,8 @@ static void start_game(void) {
         case 5:  react_start();  break;
         case 6:  drop_start();   break;
         case 7:  pong_start();   break;
-        default: rubik_start();  break;
+        case 8:  rubik_start();  break;
+        default: snake_start();  break;
     }
 }
 
@@ -197,6 +200,11 @@ void arcade_key(uint8_t row, uint8_t col, bool pressed) {
         if      (row == 1 && col == 14) drop_move(-1); // PgUp
         else if (row == 2 && col == 14) drop_move(1);  // PgDn
         else if (row == 3 && col == 13) drop_hard();   // Home
+    } else if (st == A_SNAKE) {
+        if      (row == 4 && col == 14) snake_dir(0);  // Up
+        else if (row == 5 && col == 13) snake_dir(1);  // Down
+        else if (row == 5 && col == 12) snake_dir(2);  // Left
+        else if (row == 5 && col == 14) snake_dir(3);  // Right
     } else if (st == A_TOPO)   topo_hit(row, col);
     else if (st == A_FLAPPY)   flappy_flap();          // any key also flaps
     else if (st == A_MEMORY)   memory_press(row, col);
@@ -218,6 +226,7 @@ void arcade_tick(void) {
         case A_DROP:   drop_tick();   break;
         case A_PONG:   pong_tick();   break;
         case A_RUBIK:  rubik_tick();  break;
+        case A_SNAKE:  snake_tick();  break;
         case A_SCORE:  if (timer_elapsed32(sc_t) >= 10000) enter_lobby(); break; // idle 10s -> lobby
         default: break;
     }
@@ -236,6 +245,7 @@ void arcade_render(uint8_t led_min, uint8_t led_max) {
         case A_DROP:   drop_render();   break;
         case A_PONG:   pong_render();   break;
         case A_RUBIK:  rubik_render();  break;
+        case A_SNAKE:  snake_render();  break;
         case A_SCORE:  sc_render();     break;
         default: break;
     }
