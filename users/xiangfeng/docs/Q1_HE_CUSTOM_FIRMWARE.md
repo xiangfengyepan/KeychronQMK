@@ -46,8 +46,9 @@ Source: `src/letters.c` (registered as **USER** effects in `rgb_matrix_user.inc`
 | **Palette** | 28 | Calibration tool: fills the board with one named color at a time. Turn the **knob** for next/prev swatch, HSV adjust keys to fine-tune (kept in RAM per swatch), **tap the knob** to reset a swatch, **hold the knob** to type its `H,S,V` out over USB. Colors live in `include/palette.h`. Source: `src/palette.c`. |
 | **Pressure Heatmap** | 29 | Analog effect: dark board; each key glows by its **live Hall-effect travel** (how far it's pressed), spreading heat to neighbors with falloff (deeper = spreads farther), cooling back to black on release. Cool→hot thermal ramp; dims with Fn+W/S; **cool-down rate = RGB speed (Fn+T/G)**. Reads `analog_matrix_get_travel()`. Source: `src/heatmap.c`. |
 | **Audio** | 30 | PC audio-spectrum visualizer: vertical EQ bars (green→yellow→red) driven by the `~/audio-keyboard` companion app over Raw HID (command `0xAC`, dispatched by Keychron's `kc_raw_hid_rx` → `kc_custom_hid_rx` weak hook). Bars fall to black with no app; dims with Fn+W/S. Source: `src/audio.c`. |
+| **Piano** | 31 | Hall-effect graphic-EQ "piano": keys grouped into vertical columns (hue red→violet by pitch, ~C3→C6); each column's bar height = the deepest key press in it (`analog_matrix_get_travel`) — press deeper, it climbs higher — rising fast and decaying slowly on release, brightest at the tip. Dims with Fn+W/S. Source: `src/piano.c`. |
 
-- Select by cycling RGB modes (they're the last six effects) or from the VIA Effect dropdown.
+- Select by cycling RGB modes (they're the last seven effects) or from the VIA Effect dropdown.
 - Speed (marquee scroll) follows the global RGB speed (layer 1 · T / G).
 - **Reset the buffer:** **layer 3 · Backspace** (`LT_CLEAR`, Windows Fn). Nothing clears automatically — the text stays until you clear it.
 - Letters are intentionally coarse (one LED per staggered key).

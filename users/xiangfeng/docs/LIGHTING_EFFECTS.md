@@ -1,7 +1,7 @@
 # Q1 HE (ISO) — Lighting effect order
 
 Order of the RGB effects as cycled with **layer 1 · Q** (next) / **layer 1 · A** (previous), and as
-selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last six (25–30) are custom.
+selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last seven (25–31) are custom.
 
 **Default power-on effect: Spider-Man (#27)** — set via `RGB_MATRIX_DEFAULT_MODE` in this folder's `config.h`; applies on an EEPROM reset.
 
@@ -38,6 +38,7 @@ selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last six (25–30) a
 | **28** | **Palette** 🎨 | **custom · tool** | fills the board with one named color for calibration. See below. Source: `src/palette.c`, colors in `include/palette.h` |
 | **29** | **Pressure Heatmap** 🔥 | **custom · analog** | dark board; each key lights by its **live analog Hall-effect travel** (how far it's pressed) and bleeds heat into neighbors with falloff — deeper press spreads farther; released keys cool back to black. Cool→hot thermal ramp; brightness = Fn+W/S; **cool-down rate = Fn+T/G (RGB speed)** — higher speed fades faster. Source: `src/heatmap.c` (`analog_matrix_get_travel`) |
 | **30** | **Audio** 🎵 | **custom · Raw HID** | PC audio spectrum visualizer: vertical EQ bars (green→yellow→red, rising from the bottom) driven by the `~/audio-keyboard` companion app over Raw HID (command `0xAC`). Bars fall to black when no app is running. Dims with Fn+W/S. Source: `src/audio.c` (+ `kc_custom_hid_rx` hook in `common/keychron_raw_hid.c`) |
+| **31** | **Piano** 🎹 | **custom · analog** | Hall-effect graphic-EQ: keys form vertical columns (hue red→violet, low→high pitch); each column's bar height tracks the **max analog key travel** among its keys (`analog_matrix_get_travel`) — press deeper → the bar climbs higher — rising fast and decaying slowly on release, brightest at the leading tip. Dims with Fn+W/S. Source: `src/piano.c` |
 
 **Palette (color calibration)**
 A tool effect for dialling in exact `HSV` values (all channels 0–255). The named
@@ -59,8 +60,8 @@ While this effect is active, the **knob** is repurposed:
   `10,255,255`) so you can paste the exact value with no counting.
 
 **Selecting effects**
-- On the keyboard: **layer 1 · Q / A** to cycle. The six custom effects (25–30) are at the end,
-  so **layer 1 · A** from the first effect wraps straight to Audio (30), then Pressure Heatmap (29)…
+- On the keyboard: **layer 1 · Q / A** to cycle. The seven custom effects (25–31) are at the end,
+  so **layer 1 · A** from the first effect wraps straight to Piano (31), then Audio (30)…
 - In VIA (usevia.app, with the custom definition loaded): Lighting → Effect dropdown lists all
   of the above by name.
 
