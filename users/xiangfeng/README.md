@@ -17,10 +17,10 @@ wireless keys, power timeouts, flashing) lives in each board's own doc.
 |---|---|---|
 | **rgbfx** (`src/rgbfx`) | RGB-adjust feedback: hold-to-repeat on the hue/sat/val/speed keys, blink at min/max, blackout on hue-wrap-through-0, the **binary value readout** on the number row, and the Palette knob "type H,S,V" gesture | ✅ any rgb_matrix board |
 | **palette** (`src/palette.c`) | Calibration RGB effect: fills the board with one named `COL_*` swatch at a time; knob = next/prev, tap = reset, hold = type the H,S,V over USB | ✅ |
-| **arcade** (`src/arcade.c` + `src/arcade/`) | 8 games on the LED grid (Tetris, Topo, Flappy, Dino, Memory, Reaction, Drop-Merge, Pong); knob is the dial | ✅ (positions map through `g_led_config`) |
+| **arcade** (`src/arcade.c` + `src/arcade/`) | 9 games on the LED grid (Tetris, Topo, Flappy, Dino, Memory, Reaction, Drop-Merge, Pong, **Rubik**); knob is the dial | ✅ (positions map through `g_led_config`) |
 | **ime** (`src/ime/`) | Baked pinyin IME (compose mode): type pinyin → pick a candidate → the character is *drawn with the mouse*. 276-char dictionary | ✅ (needs **mouse** for the draw engine) |
 | **mouse** (`src/mouse/`) | Mouse-animation engine: shape movers, full-screen DVD bounce (absolute digitizer), and the shared "draw a glyph with the cursor" tracer used by the IME | ✅ (DVD bounce needs `DIGITIZER_ENABLE`) |
-| **effects** (`src/letters.c`, `spider_mask.c`, `crab.c`, `cat_mask.c`) | Hand-painted / typed-letter RGB effects (positional `f(x,y,t)→RGB` fields) | ✅ (art is tuned to a 224×64 canvas; retune per board) |
+| **effects** (`src/letters.c`, `spider_mask.c`) | Hand-painted / typed-letter RGB effects (positional `f(x,y,t)→RGB` fields) | ✅ (art is tuned to a 224×64 canvas; retune per board) |
 | **utils** (`src/utils`) | `pal_rgb()` (HSV→RGB at a brightness) + `pal_put_u8()` (uint8→decimal string) | ✅ |
 | **heatmap** (`src/heatmap.c`) | Pressure heatmap from live key travel | ❌ **Hall-effect only** (`analog_matrix_get_travel`) |
 | **audio** (`src/audio.c`) | PC audio-spectrum visualizer over Raw HID | ❌ needs a board raw-HID hook + the companion app |

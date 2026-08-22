@@ -43,12 +43,11 @@ Source: `src/letters.c` (registered as **USER** effects in `rgb_matrix_user.inc`
 | **Letters Marquee** | 25 | Your typed text scrolls right → left. Remembers the last **20** characters. |
 | **Letters Big** | 26 | The last key you pressed is drawn large in the center, then fades. |
 | **Spider-Man** | 27 | Red mask with two white angular eyes (occasional blink); each keypress fires a quick white web-burst. **Power-on default** (`RGB_MATRIX_DEFAULT_MODE`). Source: `src/spider_mask.c`. |
-| **Claude crab** | 28 | A hand-painted crab (from the key-painter tool) scuttles the dark board — **orange** shell (`COL_ORANGE`), **red** eyes (`COL_RED`), wiggling legs; press a key on its shell and it **stops** for a beat, then skitters off. Source: `src/crab.c`. |
-| **Palette** | 29 | Calibration tool: fills the board with one named color at a time. Turn the **knob** for next/prev swatch, HSV adjust keys to fine-tune (kept in RAM per swatch), **tap the knob** to reset a swatch, **hold the knob** to type its `H,S,V` out over USB. Colors live in `include/palette.h`. Source: `src/palette.c`. |
-| **Pressure Heatmap** | 30 | Analog effect: dark board; each key glows by its **live Hall-effect travel** (how far it's pressed), spreading heat to neighbors with falloff (deeper = spreads farther), cooling back to black on release. Cool→hot thermal ramp; dims with Fn+W/S; **cool-down rate = RGB speed (Fn+T/G)**. Reads `analog_matrix_get_travel()`. Source: `src/heatmap.c`. |
-| **Audio** | 31 | PC audio-spectrum visualizer: vertical EQ bars (green→yellow→red) driven by the `~/audio-keyboard` companion app over Raw HID (command `0xAC`, dispatched by Keychron's `kc_raw_hid_rx` → `kc_custom_hid_rx` weak hook). Bars fall to black with no app; dims with Fn+W/S. Source: `src/audio.c`. |
+| **Palette** | 28 | Calibration tool: fills the board with one named color at a time. Turn the **knob** for next/prev swatch, HSV adjust keys to fine-tune (kept in RAM per swatch), **tap the knob** to reset a swatch, **hold the knob** to type its `H,S,V` out over USB. Colors live in `include/palette.h`. Source: `src/palette.c`. |
+| **Pressure Heatmap** | 29 | Analog effect: dark board; each key glows by its **live Hall-effect travel** (how far it's pressed), spreading heat to neighbors with falloff (deeper = spreads farther), cooling back to black on release. Cool→hot thermal ramp; dims with Fn+W/S; **cool-down rate = RGB speed (Fn+T/G)**. Reads `analog_matrix_get_travel()`. Source: `src/heatmap.c`. |
+| **Audio** | 30 | PC audio-spectrum visualizer: vertical EQ bars (green→yellow→red) driven by the `~/audio-keyboard` companion app over Raw HID (command `0xAC`, dispatched by Keychron's `kc_raw_hid_rx` → `kc_custom_hid_rx` weak hook). Bars fall to black with no app; dims with Fn+W/S. Source: `src/audio.c`. |
 
-- Select by cycling RGB modes (they're the last seven effects) or from the VIA Effect dropdown.
+- Select by cycling RGB modes (they're the last six effects) or from the VIA Effect dropdown.
 - Speed (marquee scroll) follows the global RGB speed (layer 1 · T / G).
 - **Reset the buffer:** **layer 3 · Backspace** (`LT_CLEAR`, Windows Fn). Nothing clears automatically — the text stays until you clear it.
 - Letters are intentionally coarse (one LED per staggered key).
@@ -178,7 +177,7 @@ Everything lives in **`keymaps/xiangfeng/`**. The custom C sources sit in a **`s
   - `src/ime/ime.c` — the pinyin IME compose-mode logic (behind `include/ime.h`); `keymap.c` only calls into it — see [IME.md](IME.md)
   - `src/ime/hanzi_data.c` — the 276-char pinyin → stroke-median dictionary (12 common chars per initial); built from [makemeahanzi](https://github.com/skishore/makemeahanzi) (strokes) + [hanziDB.csv](https://github.com/ruddfawcett/hanziDB.csv) (frequency/pinyin) — see [IME.md](IME.md)
   - `src/arcade.c` — the on-keyboard arcade (lobby, countdown, Tetris, Topo, Flappy, Dino, Memory, Reaction, Drop-Merge, Pong, score)
-  - `src/letters.c`, `src/spider_mask.c`, `src/crab.c`, `src/palette.c`, `src/heatmap.c`, `src/audio.c` — custom RGB effects (`src/audio.c` also overrides the `kc_custom_hid_rx` hook to receive the audio companion app's Raw HID stream)
+  - `src/letters.c`, `src/spider_mask.c`, `src/palette.c`, `src/heatmap.c`, `src/audio.c` — custom RGB effects (`src/audio.c` also overrides the `kc_custom_hid_rx` hook to receive the audio companion app's Raw HID stream)
   - `src/mouse/mouse.c` — the mouse-animation engine (behind `include/mouse.h`): shape movers, the full-screen DVD bounce, and the "draw with the mouse" glyph tracer (also driven by the IME via `draw_begin` + the shared `carriage_x`/`draw_cx`/`draw_cy`)
   - `src/rgbfx/rgbfx.c` — RGB-adjust feedback (behind `include/rgbfx.h`): min/max & hue-wrap & layer flashes, hold-to-repeat on the adjust keys, the binary value readout, and the Palette knob-hold "type the H,S,V" gesture
   - `src/utils/utils.c` — generic helpers (behind `include/utils.h`): `pal_rgb()` (HSV→RGB at a brightness) and `pal_put_u8()` (uint8→decimal), shared by rgbfx and the IME

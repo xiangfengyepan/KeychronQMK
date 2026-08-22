@@ -1,7 +1,7 @@
 # Q1 HE (ISO) — Lighting effect order
 
 Order of the RGB effects as cycled with **layer 1 · Q** (next) / **layer 1 · A** (previous), and as
-selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last seven (25–31) are custom.
+selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last six (25–30) are custom.
 
 **Default power-on effect: Spider-Man (#27)** — set via `RGB_MATRIX_DEFAULT_MODE` in this folder's `config.h`; applies on an EEPROM reset.
 
@@ -35,10 +35,9 @@ selected by number in VIA (`id_qmk_rgb_matrix_effect`). The last seven (25–31)
 | **25** | **Letters Marquee** | **custom · reactive** | typed text scrolls L→R (layer 3 · Backspace clears) |
 | **26** | **Letters Big** | **custom · reactive** | last key drawn big, fades |
 | **27** | **Spider-Man** ⭐ | **custom · reactive** | red mask + white eyes + blink; web-burst on keypress — **power-on default** |
-| **28** | **Claude crab** 🦀 | **custom · reactive** | a hand-painted crab scuttles the dark board; **orange** shell `HSV(10,255,255)`, **red** eyes `HSV(0,255,255)`; press a key on its shell → it stops for a beat. Source: `src/crab.c` |
-| **29** | **Palette** 🎨 | **custom · tool** | fills the board with one named color for calibration. See below. Source: `src/palette.c`, colors in `include/palette.h` |
-| **30** | **Pressure Heatmap** 🔥 | **custom · analog** | dark board; each key lights by its **live analog Hall-effect travel** (how far it's pressed) and bleeds heat into neighbors with falloff — deeper press spreads farther; released keys cool back to black. Cool→hot thermal ramp; brightness = Fn+W/S; **cool-down rate = Fn+T/G (RGB speed)** — higher speed fades faster. Source: `src/heatmap.c` (`analog_matrix_get_travel`) |
-| **31** | **Audio** 🎵 | **custom · Raw HID** | PC audio spectrum visualizer: vertical EQ bars (green→yellow→red, rising from the bottom) driven by the `~/audio-keyboard` companion app over Raw HID (command `0xAC`). Bars fall to black when no app is running. Dims with Fn+W/S. Source: `src/audio.c` (+ `kc_custom_hid_rx` hook in `common/keychron_raw_hid.c`) |
+| **28** | **Palette** 🎨 | **custom · tool** | fills the board with one named color for calibration. See below. Source: `src/palette.c`, colors in `include/palette.h` |
+| **29** | **Pressure Heatmap** 🔥 | **custom · analog** | dark board; each key lights by its **live analog Hall-effect travel** (how far it's pressed) and bleeds heat into neighbors with falloff — deeper press spreads farther; released keys cool back to black. Cool→hot thermal ramp; brightness = Fn+W/S; **cool-down rate = Fn+T/G (RGB speed)** — higher speed fades faster. Source: `src/heatmap.c` (`analog_matrix_get_travel`) |
+| **30** | **Audio** 🎵 | **custom · Raw HID** | PC audio spectrum visualizer: vertical EQ bars (green→yellow→red, rising from the bottom) driven by the `~/audio-keyboard` companion app over Raw HID (command `0xAC`). Bars fall to black when no app is running. Dims with Fn+W/S. Source: `src/audio.c` (+ `kc_custom_hid_rx` hook in `common/keychron_raw_hid.c`) |
 
 **Palette (color calibration)**
 A tool effect for dialling in exact `HSV` values (all channels 0–255). The named
@@ -48,7 +47,7 @@ defaults live in `include/palette.h` — 15 named colors: `COL_RED`, `COL_CORAL`
 `COL_MAGENTA`, `COL_ROSE`, `COL_PINK` (= "red light"), `COL_WHITE`.
 The knob steps them in that order — a walk around the color wheel so
 similar swatches sit next to each other, with white last. These
-constants are also the single source of color for the crab, Spider-Man, the
+constants are also the single source of color for Spider-Man, the
 keyboard indicators (IME / lock / layer meter / min-max flash) and the arcade
 game palettes.
 While this effect is active, the **knob** is repurposed:
@@ -60,8 +59,8 @@ While this effect is active, the **knob** is repurposed:
   `10,255,255`) so you can paste the exact value with no counting.
 
 **Selecting effects**
-- On the keyboard: **layer 1 · Q / A** to cycle. The seven custom effects (25–31) are at the end,
-  so **layer 1 · A** from the first effect wraps straight to Audio (31), then Pressure Heatmap (30)…
+- On the keyboard: **layer 1 · Q / A** to cycle. The six custom effects (25–30) are at the end,
+  so **layer 1 · A** from the first effect wraps straight to Audio (30), then Pressure Heatmap (29)…
 - In VIA (usevia.app, with the custom definition loaded): Lighting → Effect dropdown lists all
   of the above by name.
 

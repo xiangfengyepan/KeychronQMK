@@ -7,7 +7,6 @@
 RGB_MATRIX_EFFECT(LETTERS_MARQUEE)
 RGB_MATRIX_EFFECT(LETTERS_BIG)
 RGB_MATRIX_EFFECT(SPIDER_MASK)
-RGB_MATRIX_EFFECT(CRAB)
 RGB_MATRIX_EFFECT(PALETTE)
 RGB_MATRIX_EFFECT(HEATMAP)
 RGB_MATRIX_EFFECT(AUDIO)
@@ -27,11 +26,6 @@ bool LETTERS_BIG(effect_params_t *params) {
 bool SPIDER_MASK(effect_params_t *params) {
     extern bool spider_mask(effect_params_t * params);
     return spider_mask(params);
-}
-
-bool CRAB(effect_params_t *params) {
-    extern bool crab_effect(effect_params_t * params);
-    return crab_effect(params);
 }
 
 bool PALETTE(effect_params_t *params) {
